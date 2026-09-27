@@ -63,6 +63,7 @@ Scope
 - Pipeline per §6: IDV Failed → Rejected, no case; below `auto_approve_below` with no match →
   Active, no case; otherwise create a case (Escalated on high score or sanctions match,
   else Open) stamped with the rule version used.
+- New cases are auto-assigned round-robin across compliance analysts at creation.
 
 Tests: scoring reason output, fuzzy match thresholds, pipeline branch table.
 Done when: scenarios 1, 3 (case creation) and 4 pass.
@@ -75,6 +76,8 @@ Scope
   different senior approves. Self-approval blocked in the backend, not just hidden in the UI.
 - Decisions write customer `account_status` and the audit log in one transaction.
 - Operations user receives 403; admin has no queue route.
+- Seniors can reassign a case to a different analyst from the case page; the reassignment is
+  audited and immediately changes which analyst the RLS policy lets see the case.
 
 Tests: self-approval block, decision state machine, 403 for operations, RLS through the API.
 Done when: scenarios 2, 3, 6, 7 pass.

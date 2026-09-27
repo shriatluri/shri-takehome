@@ -24,6 +24,18 @@ generated Python. Also avoids a dependency outside the agreed list.
 access in the database. `SET LOCAL` scopes the setting to the transaction so a pooled
 connection cannot leak identity between requests.
 
+## 2026-09-27 — Round-robin case assignment with senior reassignment
+
+**Decision:** new cases are auto-assigned round-robin across compliance analysts at creation;
+a senior can reassign from the case page.
+
+**Alternative:** leave cases unassigned until a senior claims or assigns them.
+
+**Reason:** `DESIGN.md` §5 gives analysts visibility only into their own cases, so unassigned
+cases would be invisible to the people meant to work them and would stall the demo. Auto-assign
+keeps the queue live; senior reassignment covers load balancing and is itself an audited action
+that visibly changes RLS visibility.
+
 ## 2026-09-27 — Sequential PRs on `main` over a stacked series
 
 **Decision:** each PR branches from `main` and merges before the next session starts.
