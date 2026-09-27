@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { apiGet, apiPost, setDemoUser, type Employee } from "./api";
 
@@ -26,12 +26,32 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     return stored ? Number(stored) : null;
   });
 
+  // The API applies migrations and seeds before it serves, so a UI started
+  // alongside it can beat the first request. Retry until the roster arrives.
   useEffect(() => {
-    apiGet<Employee[]>("/demo/employees").then(setEmployees).catch(() => setEmployees([]));
+    let timer: number | undefined;
+    let cancelled = false;
+    const load = () =>
+      apiGet<Employee[]>("/demo/employees")
+        .then((roster) => {
+          if (!cancelled) setEmployees(roster);
+        })
+        .catch(() => {
+          if (!cancelled) timer = window.setTimeout(load, 2000);
+        });
+    load();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, []);
+
+  // A slow sign-in for the user we just left must not overwrite the current one.
+  const pending = useRef(0);
 
   useEffect(() => {
     setDemoUser(userId);
+    const attempt = ++pending.current;
     if (userId === null) {
       window.localStorage.removeItem(STORAGE_KEY);
       setIdentity(null);
@@ -39,7 +59,13 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     }
     window.localStorage.setItem(STORAGE_KEY, String(userId));
     // Switching user is this demo's login, and the backend audits it as one.
-    apiPost<Identity>("/demo/sign-in").then(setIdentity).catch(() => setIdentity(null));
+    apiPost<Identity>("/demo/sign-in")
+      .then((claim) => {
+        if (attempt === pending.current) setIdentity(claim);
+      })
+      .catch(() => {
+        if (attempt === pending.current) setIdentity(null);
+      });
   }, [userId]);
 
   return (
