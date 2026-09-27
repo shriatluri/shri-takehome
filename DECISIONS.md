@@ -48,16 +48,41 @@ can reopen the case when a better document arrives.
 only `idv_status` would leave a reviewer unable to see why a case exists, and the risk score
 cites it as a reason.
 
-## 2026-09-27 — `cases.rule_version` is the highest policy version in force
+## 2026-09-27 — `cases.policy_snapshot` records the rules a case was scored under
 
-**Decision:** a single integer per case, equal to `max(version)` over the rules in force when
-the case was scored.
+**Decision:** each case stores a jsonb map of every rule value in force at scoring time,
+`{"escalate_above": {"value": "70", "version": 1}, ...}`.
 
-**Alternative:** a jsonb snapshot of the five rule values used.
+**Alternative:** a single `rule_version` integer, equal to the highest version in force. This
+was the original choice, reverted before any code wrote cases.
 
-**Reason:** scenario 5 is written in terms of "version 1" versus "version 2", and a scalar
-renders directly in the queue. `policy_rules` still holds every historical value with its
-`valid_from` / `valid_to`, so the exact values behind a case remain recoverable.
+**Reason:** the scalar is ambiguous the moment rules are edited independently — edit
+`escalate_above` to v2, then `auto_approve_below` to v2, and cases scored under two different
+policies both read "version 2". The snapshot makes a decision self-explaining without joining
+back to `policy_rules` and reasoning about `valid_from` windows. Scenario 5 still reads as
+version 1 versus version 2 because the per-rule version travels inside the snapshot.
+
+## 2026-09-27 — `kyc_app` gets column-level UPDATE on `policy_rules`
+
+**Decision:** `GRANT SELECT, INSERT ON policy_rules` plus `GRANT UPDATE (valid_to)`, rather
+than table-wide UPDATE.
+
+**Alternative:** table-wide UPDATE, with the append-only versioning enforced in application
+code.
+
+**Reason:** publishing a version only ever closes the current row and inserts the next, so
+that is the only privilege the runtime role needs. Table-wide UPDATE would let a compromised
+session rewrite the values earlier decisions were made under — the same argument that keeps
+`audit_log` at INSERT/SELECT.
+
+## 2026-09-27 — Tests run against their own database
+
+**Decision:** the suite redirects `DB_NAME` to `<database>_test`, creating it if absent.
+
+**Alternative:** run against the same database as `docker compose up`.
+
+**Reason:** the suite reseeds and the seed truncates, so sharing a database would erase
+whatever a demo is partway through, audit history included.
 
 ## 2026-09-27 — Round-robin case assignment with senior reassignment
 

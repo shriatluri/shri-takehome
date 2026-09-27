@@ -7,6 +7,7 @@ Postgres row-level security, server-side field masking, and a hash-chained audit
 - [`DESIGN.md`](./DESIGN.md) — what we are building and why
 - [`PLAN.md`](./PLAN.md) — the PR-by-PR build plan
 - [`DECISIONS.md`](./DECISIONS.md) — decision log
+- [`CONTEXT.md`](./CONTEXT.md) — session-by-session log of what is built and what is next
 
 ## Running it
 
@@ -16,7 +17,7 @@ docker compose up
 
 - API: http://localhost:8000 (`/healthz` reports a row count per table)
 - UI: http://localhost:5173
-- Postgres: localhost:5432
+- Postgres: 127.0.0.1:5432 (bound to loopback only)
 
 The backend applies migrations on startup and loads seed data if the database is empty, so a
 first `docker compose up` gives a seeded database with no extra steps. Credentials in
@@ -52,8 +53,10 @@ DB_HOST=localhost pytest
 ```
 
 Tests run against a real Postgres, not SQLite: row-level security and role grants are the
-things being tested, and neither exists in SQLite. CI runs the same suite against a Postgres
-service container on every PR.
+things being tested, and neither exists in SQLite. They use their own `kyc_test` database
+(created on first run, override with `TEST_DB_NAME`) because the suite reseeds and the seed
+truncates — so running them will not disturb a demo in progress. CI runs the same suite
+against a Postgres service container on every PR.
 
 ## Layout
 

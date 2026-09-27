@@ -73,9 +73,9 @@ def test_case_cannot_be_approved_by_its_recommender(owner_conn):
     with owner_conn.cursor() as cur, pytest.raises(psycopg.errors.CheckViolation):
         cur.execute(
             """
-            INSERT INTO cases (customer_id, status, risk_score, rule_version,
+            INSERT INTO cases (customer_id, status, risk_score, policy_snapshot,
                                recommended_by, approved_by)
-            VALUES (1, 'Escalated', 80, 1, 3, 3)
+            VALUES (1, 'Escalated', 80, '{}'::jsonb, 3, 3)
             """
         )
     owner_conn.rollback()
@@ -95,6 +95,36 @@ def test_app_role_cannot_rewrite_history(app_conn):
             with pytest.raises(psycopg.errors.InsufficientPrivilege):
                 cur.execute(statement)
             app_conn.rollback()
+
+
+def test_seeded_cases_carry_the_policy_that_scored_them(app_conn):
+    """A version number alone cannot say which values a decision used."""
+    with app_conn.cursor() as cur:
+        cur.execute("SELECT policy_snapshot FROM cases")
+        snapshots = [row[0] for row in cur.fetchall()]
+    assert snapshots
+    for snapshot in snapshots:
+        assert snapshot["escalate_above"] == {"value": "70", "version": 1}
+        assert set(snapshot) == {
+            "auto_approve_below",
+            "escalate_above",
+            "sanctions_match_threshold",
+            "doc_expiry_window_days",
+            "high_risk_countries",
+        }
+
+
+def test_app_role_can_close_a_rule_version_but_not_rewrite_one(app_conn):
+    """Publishing a version closes a row; the old values stay as they were."""
+    with app_conn.cursor() as cur:
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            cur.execute("UPDATE policy_rules SET value = '999' WHERE rule_name = 'escalate_above'")
+        app_conn.rollback()
+
+        cur.execute(
+            "UPDATE policy_rules SET valid_to = now() WHERE rule_name = 'escalate_above'"
+        )
+        app_conn.rollback()
 
 
 def test_app_role_cannot_delete_business_records(app_conn):

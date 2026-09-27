@@ -74,8 +74,12 @@ CREATE TABLE cases (
     recommendation     TEXT CHECK (recommendation IN ('Approve', 'Reject', 'Suspend')),
     approved_by        INTEGER REFERENCES employees (id),
     decision_reason    TEXT,
-    -- Highest policy_rules.version in force when the case was scored.
-    rule_version       INTEGER NOT NULL,
+    -- Every rule value in force when the case was scored, so a decision stays
+    -- explainable after the rules change:
+    -- {"escalate_above": {"value": "70", "version": 1}, ...}
+    -- A single version number could not do this: editing two rules separately
+    -- leaves cases scored under different policies both reading "version 2".
+    policy_snapshot    JSONB NOT NULL,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     decided_at         TIMESTAMPTZ,
     CONSTRAINT cases_no_self_approval

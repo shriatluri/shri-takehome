@@ -8,7 +8,9 @@ services:
       POSTGRES_PASSWORD: kyc_owner_pw
       POSTGRES_DB: kyc
     ports:
-      - "5432:5432"
+      # Bound to the loopback interface: the owner password is in this file, so
+      # the port must not be reachable from the network.
+      - "127.0.0.1:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
