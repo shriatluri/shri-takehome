@@ -25,8 +25,8 @@ first `docker compose up` gives a seeded database with no extra steps. Credentia
 
 ## Walking the demo
 
-Pick a user bottom-left; that switcher stands in for an Entra ID login. **New customer
-submission** is the customer's own signup form, so it works whoever is signed in.
+Pick a user top-right; that switcher stands in for an Entra ID login. **New submission** is
+the customer's own signup form, so it works whoever is signed in.
 
 - **A blurry document** → the submission scores 30, files an Open case, and round-robin
   assigns it. Sign in as that analyst, open the case, Approve — the customer goes Active.
@@ -67,6 +67,24 @@ cd backend
 pip install -r requirements.txt
 DB_HOST=localhost pytest
 ```
+
+The suite is written against the acceptance scenarios in `DESIGN.md` §8 rather than against
+individual functions, so each row below is the test that has to pass for that scenario to be
+called done:
+
+| # | Scenario | Test |
+|---|---|---|
+| 1 | Clean submission → Active, no case | `test_a_clean_submission_is_activated_without_a_case` |
+| 2 | Blurry document → Open case, analyst approves, customer Active | `test_scenario_2_analyst_approves_an_open_case` |
+| 3 | Near-sanctions name → Escalated, recommender cannot approve, senior does | `test_scenario_3_maker_checker_on_an_escalated_case`, `test_a_senior_cannot_approve_their_own_recommendation` |
+| 4 | Fake document → Rejected, no case | `test_a_fake_document_is_rejected_without_a_case` |
+| 5 | Policy edit re-versions, old cases keep version 1 | **not yet — PR 5** |
+| 6 | Operations opens the queue → blocked | `test_scenario_6_operations_is_blocked_from_every_queue_route` |
+| 7 | Analyst queries `cases` as the app role → only assigned rows | `test_scenario_7_an_analyst_reaches_only_their_own_cases` |
+
+The rest of the suite guards the rules those scenarios depend on: round-robin rotation,
+escalated cases needing a recommendation first, decided cases being final, reassignment
+moving visibility between analysts, and every decision writing an audit entry.
 
 Tests run against a real Postgres, not SQLite: row-level security and role grants are the
 things being tested, and neither exists in SQLite. They use their own `kyc_test` database
