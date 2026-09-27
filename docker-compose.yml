@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      # The database is created owned by kyc_owner. The runtime role kyc_app is
+      # created by the first migration and owns nothing.
+      POSTGRES_USER: kyc_owner
+      POSTGRES_PASSWORD: kyc_owner_pw
+      POSTGRES_DB: kyc
+    ports:
+      # Bound to the loopback interface: the owner password is in this file, so
+      # the port must not be reachable from the network.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kyc_owner -d kyc"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: kyc
+      DB_OWNER_USER: kyc_owner
+      DB_OWNER_PASSWORD: kyc_owner_pw
+      DB_APP_USER: kyc_app
+      DB_APP_PASSWORD: kyc_app_pw
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/srv/backend
+      - ./db:/srv/db:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /srv/frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/srv/frontend
+      - frontend_modules:/srv/frontend/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  frontend_modules:
