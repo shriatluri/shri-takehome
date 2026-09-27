@@ -17,9 +17,7 @@ per request, sequential PRs rather than a stack, CI pulled forward into PR 1. As
 question the design left open — who assigns cases — and got round-robin at creation with
 senior reassignment from the case page.
 
-## Last session (most recent)
-
-### Session 2 — foundation (PR [#2](https://github.com/shriatluri/shri-takehome/pull/2))
+### Session 2 — foundation (PR [#2](https://github.com/shriatluri/shri-takehome/pull/2), merged)
 
 `docker compose up` now brings up Postgres + FastAPI + Vite, applies migrations, seeds
 synthetic data, and serves `/healthz`. No KYC behaviour yet.
@@ -43,18 +41,43 @@ seed expiry date, and the published Postgres port. Declined as not worth the sco
 URL-reserved characters in passwords, rotating the demo credentials, and re-running the role
 migration when `DB_APP_PASSWORD` changes.
 
+## Last session (most recent)
+
+### Session 3 — platform controls (PR 2)
+
+The four controls the demo is about now work end to end: pick a user in the switcher and the
+queue, the SSN column, and the audit tab all change.
+
+- **Identity:** `X-Demo-User: <employee id>` → `{sub, name, groups: [team, level]}`, an Entra
+  ID-shaped claim. Authorization reads `groups` only, so swapping in real Entra means
+  replacing the claim source. Unknown or missing header on an app route → 401.
+- **Request-scoped session:** `session_scope` issues `set_config('app.user_id', …, true)` —
+  transaction-local, so a pooled connection cannot leak identity between requests. A test
+  asserts the setting is gone after the transaction ends.
+- **RLS (`004_rls.sql`):** `FORCE ROW LEVEL SECURITY` on `cases`, `customers`, `policy_rules`.
+  Policies join `employees` through `app_user_id()`, so the database derives team and level
+  rather than trusting anything header-derived. Analyst → assigned cases; compliance senior →
+  all; operations and admin → none. No identity set means no rows.
+- **Masking:** `***-**-1234` in the serializer for everyone but compliance seniors — admin is
+  `level = senior` and still gets a masked value.
+- **Audit:** `sha256(prev_hash || canonical row)` written in the same transaction as the
+  action, serialized on `pg_advisory_xact_lock`. Tampering or deleting a row makes `verify`
+  return the first bad id.
+- **Frontend:** identity context + user switcher, API client that attaches the header,
+  claim-filtered local-state nav, read-only queue page and admin audit page.
+- **Tests:** 39 pytest tests against real Postgres (was 13), including RLS asserted in raw
+  SQL as `kyc_app`.
+
+Settled this session (details in `DECISIONS.md`): `audit_log` append-only by grant with
+admin-only reads at the route rather than RLS plus a definer function; anonymous submissions
+run as reserved id `0` with a null audit actor; coarse `customers` policy; full SSN requires
+compliance *and* senior; local-state nav instead of `react-router-dom`.
+
 ## Next session
 
-**PR 2 — platform controls** (`backend/app/platform/`, per `PLAN.md`):
-
-1. Mock identity shaped like Entra ID claims (`X-Demo-User` header → employee), plus the
-   frontend user switcher.
-2. RLS policies with `FORCE ROW LEVEL SECURITY`: analysts see only cases assigned to them,
-   seniors see the whole compliance queue, operations sees none.
-3. Request-scoped `SET LOCAL app.user_id` in `get_session`, so the policies have an identity.
-4. Server-side SSN masking — the API never emits full SSNs to a role that cannot see them.
-5. Hash-chained audit logger, verified by a test that tampering breaks the chain.
-
-Everything above is platform, not KYC. The pipeline (risk scoring, sanctions matching, case
-creation, round-robin assignment) is PR 3, and the review queue UI with maker-checker
-approvals and the Suspend decision is PR 4.
+**PR 3 — the KYC pipeline** (`backend/app/apps/kyc/`, per `PLAN.md`): the submission form,
+mock IDV and sanctions matching, risk scoring against `policy_rules` with a
+`policy_snapshot`, case creation and round-robin assignment. It imports the platform layer —
+identity, `session_scope`, `audit.record` — and adds nothing to it. The review queue UI with
+maker-checker approvals and the Suspend decision is PR 4; `/cases` and the queue page here
+are read-only placeholders that PR 4 replaces.

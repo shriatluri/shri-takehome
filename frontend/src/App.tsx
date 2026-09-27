@@ -1,55 +1,38 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { apiGet, type Health } from "./platform/api";
+import { QueuePage } from "./apps/kyc/QueuePage";
+import { UserSwitcher } from "./demo/UserSwitcher";
+import { AuditPage } from "./platform/AuditPage";
+import { IdentityProvider, useIdentity } from "./platform/identity";
+import { Nav, visiblePages, type Page } from "./platform/nav";
 
-export default function App() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const PAGES: Page[] = [
+  { id: "queue", label: "Review queue", groups: ["compliance"], render: () => <QueuePage /> },
+  { id: "audit", label: "Audit log", groups: ["admin"], render: () => <AuditPage /> },
+];
 
-  useEffect(() => {
-    // The backend applies migrations before it serves, so the first call often
-    // lands before it is listening. Keep asking until it answers.
-    let timer: number | undefined;
-    const poll = () =>
-      apiGet<Health>("/healthz")
-        .then((h) => {
-          setHealth(h);
-          setError(null);
-        })
-        .catch((e: Error) => {
-          setError(e.message);
-          timer = window.setTimeout(poll, 2000);
-        });
-    poll();
-    return () => window.clearTimeout(timer);
-  }, []);
+function Shell() {
+  const { identity } = useIdentity();
+  const [page, setPage] = useState("queue");
+  const allowed = visiblePages(PAGES, identity);
+  const current = allowed.find((candidate) => candidate.id === page) ?? allowed[0];
 
   return (
     <main>
       <h1>KYC Review Queue</h1>
-      <p>
-        Foundation only: the queue, submission form and admin pages arrive in later PRs. This
-        page confirms the backend is up and the database came up seeded.
-      </p>
-      {error && <p role="alert">Backend unreachable ({error}) — retrying.</p>}
-      {health && (
-        <table>
-          <thead>
-            <tr>
-              <th>Table</th>
-              <th>Rows</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(health.counts).map(([table, count]) => (
-              <tr key={table}>
-                <td>{table}</td>
-                <td>{count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <UserSwitcher />
+      {!identity && <p>Choose a demo user to sign in.</p>}
+      <Nav pages={PAGES} current={current?.id ?? ""} onSelect={setPage} />
+      {identity && !current && <p>This user has no pages. Operations is blocked by design.</p>}
+      {current?.render()}
     </main>
+  );
+}
+
+export default function App() {
+  return (
+    <IdentityProvider>
+      <Shell />
+    </IdentityProvider>
   );
 }
