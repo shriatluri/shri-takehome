@@ -11,8 +11,8 @@ export function AuditPage() {
   return (
     <>
       <p>
-        Each entry hashes the one before it. The filter UI and the chain-verify endpoint
-        arrive in PR 5.
+        Each entry hashes the one before it. Showing the 100 most recent; paging, filters
+        and the chain-verify endpoint arrive in PR 5.
       </p>
       <table>
         <thead>

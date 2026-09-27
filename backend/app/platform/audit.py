@@ -125,7 +125,12 @@ def read(session: Session, limit: int = 100) -> list[dict[str, Any]]:
 
 
 def verify(session: Session) -> int | None:
-    """Recompute the chain. Returns the id of the first broken row, or None."""
+    """Recompute the chain. Returns the id of the first broken row, or None.
+
+    Detects an edited or removed row, because its successor carries the hash it
+    should have had. Truncating the newest rows leaves no successor to
+    contradict, so catching that needs an anchor stored outside this table.
+    """
     rows = session.execute(
         text(
             """
