@@ -15,7 +15,7 @@ Postgres row-level security, server-side field masking, and a hash-chained audit
 docker compose up
 ```
 
-- API: http://localhost:8000 (`/healthz` reports a row count per table)
+- API: http://localhost:8000 (`/healthz` is liveness only)
 - UI: http://localhost:5173
 - Postgres: 127.0.0.1:5432 (bound to loopback only)
 
@@ -62,7 +62,8 @@ before they run, which is how the runtime role name and password reach `CREATE R
 `GRANT` without being hardcoded.
 
 Seed data lives in `db/seed/`. The files truncate before inserting, so replaying them restores
-the demo state; that is what the demo reset button will call.
+the demo state. There is no reset endpoint or button yet; restore the demo by replaying the
+seed file with `psql`, or `docker compose down -v` to start from an empty volume.
 
 ## Tests
 
@@ -101,7 +102,7 @@ against a Postgres service container on every PR.
 ```
 backend/app/platform/   reusable template: identity, roles, RLS helpers, masking, audit
 backend/app/apps/kyc/   KYC-specific logic: submission pipeline, mock vendors, scoring
-backend/app/demo/       demo-only: user switcher, reset
+backend/app/demo/       demo-only: user switcher
 frontend/src/{platform,apps/kyc,demo}/
 db/migrations/          numbered SQL, applied on startup
 db/seed/                synthetic seed data

@@ -37,9 +37,9 @@ synthetic data, and serves `/healthz`. No KYC behaviour yet.
   them plus a frontend typecheck/build on every PR.
 
 Devin Review on PR #2: fixed the `policy_rules` grant, test-database isolation, a hardcoded
-seed expiry date, and the published Postgres port. Declined as not worth the scope: escaping
-URL-reserved characters in passwords, rotating the demo credentials, and re-running the role
-migration when `DB_APP_PASSWORD` changes.
+seed expiry date, the published Postgres port, and percent-encoding credentials in the
+connection URL. Declined as not worth the scope: rotating the demo credentials and re-running
+the role migration when `DB_APP_PASSWORD` changes.
 
 ### Session 3 — platform controls (PR 2)
 
@@ -156,5 +156,17 @@ place the audit log in the template, so filters, facets and chain verification b
 
 **PR 6 — stretch**, per `PLAN.md`: a feature-flag app built entirely in
 `apps/feature_flags/` on top of `platform/`, proving a new internal app needs no template
-changes. Known gap if it is worth closing first: `verify` cannot detect the newest rows
-being truncated, since nothing outside `audit_log` anchors the tip of the chain.
+changes.
+
+**Not built, and deliberately so — nothing in the docs should imply otherwise:**
+
+- `verify` cannot detect the newest rows being truncated, since nothing outside `audit_log`
+  anchors the tip of the chain.
+- The reset button in `DESIGN.md` §7 does not exist, in the UI or as a route. Replaying
+  `db/seed/001_seed.sql` as the owner role, or `docker compose down -v`, restores the demo.
+- `doc_expiry_window_days` is seeded, editable and versioned, but `score_submission` reads
+  country, IDV verdict and sanctions only, so publishing it changes no score. Two seeded
+  cases carry historical reasons ("document expires within 30 days", "incomplete address
+  history") that the current scorer never produces.
+- There are no frontend or end-to-end tests; the UI is checked by hand against the skill in
+  `.agents/skills/kyc-demo-testing/`.

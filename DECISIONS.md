@@ -26,7 +26,7 @@ connection cannot leak identity between requests.
 
 ## 2026-09-27 — Suspension is a decision outcome, not a side effect
 
-**Decision:** reviewing a Needs-review case offers Approve / Reject / Suspend. Suspend sets
+**Decision:** reviewing a case offers Approve / Reject / Suspend. Suspend sets
 the customer to `Suspended` and moves the case to a `Suspended` status, so `cases.status` and
 `cases.recommendation` gain `Suspended` / `Suspend` beyond `DESIGN.md` §4.
 
@@ -172,8 +172,8 @@ entry's `full_name` and each alias, compared against `sanctions_match_threshold`
 
 **Alternative:** `rapidfuzz`, which `PLAN.md` allowed, or an exact normalized match.
 
-**Reason:** the demo needs a near miss — "Casey Lindquist" against the seeded "Casey
-Lindqvist" — so exact matching would not show the threshold doing anything, while a matching
+**Reason:** the demo needs a near miss — a typed "Casee Lindquist" against the seeded list
+entry "Casey Lindquist" — so exact matching would not show the threshold doing anything, while a matching
 library is a dependency and a set of scorer choices for a screen that is six lines. Partial
 DOBs on the list stay out of the comparison entirely; the name is the whole signal.
 
