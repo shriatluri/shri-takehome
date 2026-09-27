@@ -3,7 +3,7 @@ import { useApiList } from "../../platform/useApiList";
 
 /** Read-only for now; decisions and the case detail page are PR 4. */
 export function QueuePage() {
-  const { data: cases, error } = useApiList<Case>(() => apiGet<Case[]>("/cases"));
+  const { data: cases, error, loading } = useApiList<Case>(() => apiGet<Case[]>("/cases"));
 
   if (error) {
     return <p role="alert">{error}</p>;
@@ -40,7 +40,8 @@ export function QueuePage() {
           ))}
         </tbody>
       </table>
-      {cases.length === 0 && <p>No cases visible to this user.</p>}
+      {loading && <p>Loading…</p>}
+      {!loading && cases.length === 0 && <p>No cases visible to this user.</p>}
     </>
   );
 }
