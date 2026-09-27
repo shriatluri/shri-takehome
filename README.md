@@ -44,6 +44,8 @@ db/migrations/          numbered SQL, applied on startup; db/seed/ synthetic see
 ## Run it
 
 ```bash
+git clone https://github.com/shriatluri/shri-takehome.git
+cd shri-takehome
 docker compose up --build
 ```
 
