@@ -49,14 +49,19 @@ export function AuditPage({ search }: { search: string }) {
   };
 
   const term = search.trim().toLowerCase();
-  const rows = entries.filter(
-    (entry) =>
-      !term ||
-      entry.action.toLowerCase().includes(term) ||
-      (entry.employee_name ?? "system").toLowerCase().includes(term) ||
-      (entry.record_id ?? "").toLowerCase().includes(term) ||
-      entry.record_type.toLowerCase().includes(term),
-  );
+  // The same two filters again, because `entries` still holds the previous
+  // answer until the refreshed request lands.
+  const rows = entries
+    .filter((entry) => !action || entry.action === action)
+    .filter((entry) => !recordType || entry.record_type === recordType)
+    .filter(
+      (entry) =>
+        !term ||
+        entry.action.toLowerCase().includes(term) ||
+        (entry.employee_name ?? "system").toLowerCase().includes(term) ||
+        (entry.record_id ?? "").toLowerCase().includes(term) ||
+        entry.record_type.toLowerCase().includes(term),
+    );
 
   if (error) {
     return (
@@ -149,7 +154,12 @@ export function AuditPage({ search }: { search: string }) {
                         }
                       }}
                     >
-                      <td className="mono">{entry.id}</td>
+                      <td className="mono">
+                        <span className="chevron" aria-hidden="true">
+                          {expanded === entry.id ? "▾" : "▸"}
+                        </span>
+                        {entry.id}
+                      </td>
                       <td title={new Date(entry.timestamp).toLocaleString()}>
                         {relativeTime(entry.timestamp)}
                       </td>
@@ -168,11 +178,11 @@ export function AuditPage({ search }: { search: string }) {
                           <div className="grid-2">
                             <div className="field-box">
                               <span>Details</span>
-                              <b className="mono">{JSON.stringify(entry.details)}</b>
+                              <pre className="mono">{JSON.stringify(entry.details, null, 2)}</pre>
                             </div>
                             <div className="field-box">
-                              <span>Links to</span>
-                              <b className="mono">{entry.prev_hash ?? "chain start"}</b>
+                              <span>Previous hash</span>
+                              <pre className="mono">{entry.prev_hash ?? "chain start"}</pre>
                             </div>
                           </div>
                         </td>

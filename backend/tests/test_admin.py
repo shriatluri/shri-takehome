@@ -93,6 +93,12 @@ def test_publishing_keeps_the_old_row_and_audits_the_change(client):
     # Republishing the same value would open a version that changed nothing.
     assert admin("PUT", "/policy-rules/auto_approve_below", json={"value": "20"}).status_code == 409
 
+    # A threshold the scorer cannot read is refused here, not on the next
+    # submission.
+    assert admin("PUT", "/policy-rules/auto_approve_below", json={"value": "abc"}).status_code == 422
+    still = admin("GET", "/policy-rules").json()
+    assert [r["version"] for r in still if r["rule_name"] == "auto_approve_below"] == [2, 1]
+
 
 def test_only_admin_reaches_the_policy_and_audit_routes(client):
     for user in (ALICE, OWEN_OPS, DANA):

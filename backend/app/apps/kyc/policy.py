@@ -16,6 +16,15 @@ from sqlalchemy.orm import Session
 from app.platform import audit
 from app.platform.identity import Identity
 
+# Rules the scorer reads with int(); a non-numeric value here would not fail
+# here but on the next submission, inside scoring.
+NUMERIC_RULES = {
+    "auto_approve_below",
+    "escalate_above",
+    "sanctions_match_threshold",
+    "doc_expiry_window_days",
+}
+
 
 def history(session: Session) -> list[dict[str, Any]]:
     """Every version of every rule, current first within each rule."""
@@ -38,7 +47,15 @@ def publish(session: Session, identity: Identity, rule_name: str, value: str) ->
     value = value.strip()
     if not value:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "a rule needs a value")
+    if rule_name in NUMERIC_RULES and not value.lstrip("-").isdigit():
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"{rule_name} is a number")
 
+    # Two admins publishing the same rule would otherwise both read version n
+    # and the second insert would hit the (rule_name, version) unique index.
+    session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext('policy_rules'), hashtext(:name))"),
+        {"name": rule_name},
+    )
     current = session.execute(
         text(
             """

@@ -465,6 +465,9 @@ textarea:focus {
 
 select {
   cursor: pointer;
+  /* Pill, like the buttons they sit beside. */
+  border-radius: 999px;
+  padding-left: 1.05rem;
   /* Room for the caret, so a long employee name never sits under it. */
   padding-right: 2rem;
   appearance: none;
@@ -616,7 +619,23 @@ tbody tr:last-child td {
   overflow-wrap: anywhere;
 }
 
+.chevron {
+  display: inline-block;
+  width: 1rem;
+  color: var(--text-faint);
+}
+
 /* The expanded audit row: the hash link and details, not another clickable. */
+.row-detail pre {
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .row-detail td {
   background: var(--surface-sunken);
   padding: 1rem 1.15rem;

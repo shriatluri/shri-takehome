@@ -25,9 +25,13 @@ export function PolicyPage({ search }: { search: string }) {
   const toast = useToast();
 
   const term = search.trim().toLowerCase();
-  const current = rules
-    .filter((rule) => rule.valid_to === null)
-    .filter((rule) => !term || rule.rule_name.includes(term));
+  // Searching what is on screen: the label, not only the column name.
+  const matches = (rule: PolicyRule) =>
+    !term ||
+    rule.rule_name.includes(term) ||
+    (LABELS[rule.rule_name] ?? "").toLowerCase().includes(term);
+  const current = rules.filter((rule) => rule.valid_to === null).filter(matches);
+  const history = rules.filter(matches);
 
   const publish = (rule: PolicyRule) => {
     const value = drafts[rule.rule_name] ?? rule.value;
@@ -67,6 +71,11 @@ export function PolicyPage({ search }: { search: string }) {
           </span>
         }
       >
+        {current.length === 0 && (
+          <p className="muted">
+            No rule matches “{search.trim()}”. Clear the search to see all five.
+          </p>
+        )}
         {current.map((rule) => {
           const draft = drafts[rule.rule_name] ?? rule.value;
           const changed = draft.trim() !== rule.value;
@@ -110,14 +119,14 @@ export function PolicyPage({ search }: { search: string }) {
               </tr>
             </thead>
             <tbody>
-              {rules.map((rule) => (
+              {history.map((rule) => (
                 <tr key={rule.id}>
                   <td className="mono">{rule.rule_name}</td>
                   <td className="mono">v{rule.version}</td>
                   <td>{rule.value}</td>
                   <td>
-                    {new Date(rule.valid_from).toLocaleDateString()} –{" "}
-                    {rule.valid_to ? new Date(rule.valid_to).toLocaleDateString() : "now"}
+                    {new Date(rule.valid_from).toLocaleString()} –{" "}
+                    {rule.valid_to ? new Date(rule.valid_to).toLocaleString() : "now"}
                   </td>
                   <td>{rule.changed_by_name ?? "system"}</td>
                 </tr>
