@@ -71,8 +71,6 @@ admin-only reads at the route rather than RLS plus a definer function; anonymous
 run as reserved id `0` with a null audit actor; coarse `customers` policy; full SSN requires
 compliance *and* senior; local-state nav instead of `react-router-dom`.
 
-## Last session (most recent)
-
 ### Session 4 — KYC pipeline (PR 3)
 
 One vertical slice: submit the form on the page and a scored case appears in an analyst's
@@ -96,9 +94,39 @@ queue on the next refresh. Nothing under `backend/app/platform/` changed.
 - **Tests:** 5 slice tests (44 total) — case created, scored, assigned and visible to its
   assignee; the sanctions branch and its audit entry; both no-case branches; the rotation.
 
+## Last session (most recent)
+
+### Session 5 — review queue (PR 4)
+
+The queue is now the working half of the demo: submit a case, open it, decide it, and watch
+the customer's account status follow. Scenarios 2, 3, 6 and 7 pass. Nothing under
+`backend/app/platform/` changed.
+
+- **Routes:** `GET /cases/{id}` (case + customer, masked), `POST /cases/{id}/recommendation`,
+  `POST /cases/{id}/decision`, `POST /cases/{id}/assignment`, `GET /reviewers`. All behind
+  `require_group("compliance")`, so operations and admin get 403 before RLS is consulted.
+- **State machine (`apps/kyc/decisions.py`):** Open → any reviewer who can see it decides.
+  Escalated → someone recommends, then a *different* compliance senior decides; the
+  recommender is refused 403 and the database's `CHECK (approved_by <> recommended_by)`
+  refuses it a second time. Decided cases are final (409). The decision writes the case row,
+  the customer's `account_status` and the audit entry in one transaction.
+- **Reassignment:** senior-only, target must be on the compliance team, audited — and the
+  previous assignee loses the case on their next poll, because the RLS policy is the only
+  thing deciding who sees it.
+- **Frontend:** design tokens in `index.css` and primitives in `platform/ui.tsx` (card,
+  badge, risk dial, drawer, toasts, skeletons) — no UI dependency added. Sidebar shell, queue
+  with 5s polling, filter chips, search, clickable rows, and a case drawer with the risk
+  breakdown, policy snapshot, maker-checker state and the actions this user may take. The
+  submission form moved into a drawer; it still says "Received." and nothing else.
+- **Tests:** 10 queue tests (54 total) — approval path, self-approval block, missing
+  recommendation, already-decided, operations 403 on every route, analyst 404 on another
+  analyst's case, raw SQL as `kyc_app` seeing only assigned rows, reassignment flipping
+  visibility, and the audit entries.
+
 ## Next session
 
-**PR 4 — the review queue**, per `PLAN.md`: the queue page with 5s polling and a case detail
-page, maker-checker decisions with the self-approval block in the backend, Suspend, senior
-reassignment. `GET /cases` and `QueuePage` are still the read-only placeholders from PR 2 —
-PR 4 replaces them. The submission form is where PR 4's queue gets its new cases from.
+**PR 5 — policy administration**, per `PLAN.md`: the admin page that versions `policy_rules`
+(`valid_to` on the old row, a new row at version + 1) so scenario 5 passes — change
+`escalate_above` 70 → 50, submit something scoring ~60, and the new case is Escalated under
+version 2 while the older case still shows version 1 in its snapshot. The audit page is also
+still the unfiltered 100-row list from PR 2; chain verification belongs there.

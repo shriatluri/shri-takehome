@@ -23,6 +23,22 @@ The backend applies migrations on startup and loads seed data if the database is
 first `docker compose up` gives a seeded database with no extra steps. Credentials in
 `docker-compose.yml` are demo values; nothing here is meant to leave a laptop.
 
+## Walking the demo
+
+Pick a user bottom-left; that switcher stands in for an Entra ID login. **New customer
+submission** is the customer's own signup form, so it works whoever is signed in.
+
+- **A blurry document** → the submission scores 30, files an Open case, and round-robin
+  assigns it. Sign in as that analyst, open the case, Approve — the customer goes Active.
+- **A name close to a sanctions entry** (try `Casee Lindquist`) → an Escalated case. Any
+  compliance user recommends; the same person is then refused the decision and a second
+  compliance senior has to approve it.
+- **Owen Park (operations)** → no queue. The route answers 403 and the RLS policies match no
+  rows either.
+- **Alice vs. Ben** → each analyst sees only their own cases, and the same is true in `psql`
+  as `kyc_app` with `app.user_id` set. The API adds no `assigned_to` filter; the database is
+  the only thing enforcing it.
+
 ## Database roles
 
 | Role | Used by | Privileges |

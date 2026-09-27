@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { apiPost } from "../../platform/api";
+import { useToast } from "../../platform/ui";
 
 const EMPTY = {
   full_name: "",
@@ -20,6 +21,7 @@ const EMPTY = {
 export function SubmissionForm() {
   const [form, setForm] = useState(EMPTY);
   const [state, setState] = useState<"editing" | "sending" | "received" | "failed">("editing");
+  const toast = useToast();
 
   const field = (name: keyof typeof EMPTY) => ({
     value: form[name],
@@ -34,46 +36,60 @@ export function SubmissionForm() {
       .then(() => {
         setForm(EMPTY);
         setState("received");
+        toast("Submission received — check the queue on the next refresh");
       })
       .catch(() => setState("failed"));
   };
 
   return (
-    <section className="demo-controls">
-      <h2>Customer submission</h2>
-      <form onSubmit={submit}>
-        <label>
-          Full name <input required {...field("full_name")} />
+    <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
+      <div className="grid-2">
+        <label className="field">
+          Full name
+          <input required {...field("full_name")} />
         </label>
-        <label>
-          Date of birth <input required type="date" {...field("dob")} />
+        <label className="field">
+          Date of birth
+          <input required type="date" {...field("dob")} />
         </label>
-        <label>
-          Country <input required {...field("country")} />
+        <label className="field">
+          Country
+          <input required placeholder="e.g. Volgaria" {...field("country")} />
         </label>
-        <label>
-          Address <input required {...field("address")} />
+        <label className="field">
+          SSN
+          <input required placeholder="900-00-0000" {...field("ssn")} />
         </label>
-        <label>
-          SSN <input required {...field("ssn")} />
+        <label className="field">
+          Document expiry
+          <input type="date" {...field("document_expiry")} />
         </label>
-        <label>
-          Document expiry <input type="date" {...field("document_expiry")} />
-        </label>
-        <label>
-          Document quality{" "}
+        <label className="field">
+          Document quality
           <select {...field("document_quality")}>
             <option>Clear</option>
             <option>Blurry</option>
             <option>Fake</option>
           </select>
         </label>
-        <button type="submit" disabled={state === "sending"}>
-          Submit
+      </div>
+      <label className="field">
+        Address
+        <input required {...field("address")} />
+      </label>
+
+      <div className="row spread">
+        <p className="muted">
+          Runs the mock IDV and sanctions checks, scores the submission, and files a case if
+          one is needed.
+        </p>
+        <button className="btn btn-primary" type="submit" disabled={state === "sending"}>
+          {state === "sending" ? "Submitting…" : "Submit"}
         </button>
-      </form>
-      {state === "received" && <p>Received.</p>}
+      </div>
+
+      {state === "received" && <p className="muted">Received.</p>}
       {state === "failed" && <p role="alert">Could not submit.</p>}
-    </section>
+    </form>
   );
 }
