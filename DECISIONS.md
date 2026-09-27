@@ -221,3 +221,50 @@ already holds the score, the reasons and the case it produced.
 Dow Jones client would be swapped into — keeping them beside the pipeline they serve makes
 that swap a one-folder change. `demo/` stays what it is: the user switcher, i.e. things that
 would not exist at all outside the demo.
+
+## 2026-09-27 — Decisions live in `apps/kyc/decisions.py`, not the route
+
+**Decision:** the recommend / decide / reassign state machine is a module of functions taking
+`(session, identity, case, …)`; the route does HTTP and serialization only.
+
+**Alternative:** the transition rules inline in the route handlers.
+
+**Reason:** every rule in it is a rule the demo is about — an Escalated case needs a
+recommendation, the recommender cannot approve, a decided case is final. Read together in one
+file they are reviewable; spread across three handlers next to `SELECT` statements they are
+not. It also keeps the maker-checker check somewhere a future approval flow can reuse.
+
+## 2026-09-27 — The case detail query has no `assigned_to` filter
+
+**Decision:** `GET /cases/{id}` selects by id alone, and an analyst asking for someone else's
+case gets 404 because RLS returned no row.
+
+**Alternative:** an explicit `AND assigned_to = :me`, belt and braces.
+
+**Reason:** two places to change when the visibility rule changes is how the two drift apart,
+and the demo's claim is that the database enforces this. The API filtering as well would make
+the RLS policy untested by the scenario that is supposed to prove it.
+
+## 2026-09-27 — Buttons mirror the rules; the backend holds them
+
+**Decision:** the drawer hides actions the caller cannot take, but every one of them is
+re-checked server-side, and the 403's `detail` is what the toast displays.
+
+**Alternative:** grey out nothing and let the errors speak, or trust the hidden UI.
+
+**Reason:** hidden buttons are a courtesy, not a control — `test_review_queue.py` calls the
+endpoints directly as the wrong user to prove it. Surfacing the server's own reason ("the
+person who recommended cannot also approve") also means the demo shows the rule firing rather
+than a generic failure.
+
+## 2026-09-27 — A design system in CSS, no component library
+
+**Decision:** `index.css` carries the tokens and `platform/ui.tsx` the primitives (card,
+badge, risk dial, drawer, toast); no UI dependency was added.
+
+**Alternative:** shadcn/ui, Mantine, or Tailwind.
+
+**Reason:** the queue needs a table, a drawer and five status colours. A library brings a
+build step and a hundred components for that, and the point of the exercise is what the
+database enforces, not which toolkit renders it. Anything reusable across apps sits in
+`platform/` so the next app on this template inherits the look.

@@ -15,9 +15,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   const response = await fetch(`${API_URL}${path}`, { ...init, headers });
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
+    // FastAPI puts the reason in `detail`; showing it is the difference between
+    // "403" and "the person who recommended cannot also approve".
+    const detail = await response
+      .json()
+      .then((body) => (typeof body?.detail === "string" ? body.detail : null))
+      .catch(() => null);
+    throw new ApiError(response.status, detail ?? `${response.status} ${response.statusText}`);
   }
   return (await response.json()) as T;
+}
+
+export class ApiError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
 }
 
 export function apiGet<T>(path: string): Promise<T> {
@@ -46,6 +58,7 @@ export type Case = {
   id: number;
   status: string;
   risk_score: number;
+  assigned_to: number | null;
   assigned_to_name: string | null;
   customer_id: number;
   customer_name: string;
@@ -53,6 +66,31 @@ export type Case = {
   ssn: string;
   account_status: string;
 };
+
+export type RiskReason = { reason: string; points: number };
+
+export type CaseDetail = Case & {
+  risk_reasons: RiskReason[];
+  policy_snapshot: Record<string, { value: string; version: number }>;
+  recommended_by: number | null;
+  recommended_by_name: string | null;
+  recommendation: string | null;
+  approved_by: number | null;
+  approved_by_name: string | null;
+  decision_reason: string | null;
+  created_at: string;
+  decided_at: string | null;
+  dob: string;
+  address: string;
+  document_expiry: string | null;
+  document_quality: string | null;
+  idv_status: string;
+  idv_reason: string | null;
+  sanctions_match_name: string | null;
+  sanctions_program: string | null;
+};
+
+export type Reviewer = { id: number; name: string; level: string };
 
 export type AuditEntry = {
   id: number;
