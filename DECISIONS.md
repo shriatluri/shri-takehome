@@ -179,15 +179,26 @@ DOBs on the list stay out of the comparison entirely; the name is the whole sign
 
 ## 2026-09-27 — Additive risk score with the weights in code
 
-**Decision:** high-risk country (25) + Needs-review IDV (30) + sanctions match (60), summed,
-each contributing one reason. The thresholds it is compared against come from `policy_rules`;
-the weights do not.
+**Decision:** high-risk country (25) + Needs-review IDV (30) + sanctions match (60) + a
+document expiring inside `doc_expiry_window_days` (15), summed, each contributing one reason.
+The thresholds it is compared against come from `policy_rules`; the weights do not.
 
 **Alternative:** putting the weights in `policy_rules` too, or a weighted model.
 
 **Reason:** what the admin page in PR 5 changes is where the lines sit, and the scenario 5
 demo moves `escalate_above`. Making every weight editable widens that page and the snapshot
 for no scenario. A sum with a reason per term is also the part that has to be explainable.
+
+## 2026-09-27 — `doc_expiry_window_days` scores the submission rather than sitting unread
+
+**Decision:** a `document_expiry` on or before `today + doc_expiry_window_days` adds 15
+points with the reason "document expires within N days", N taken from the rule in force.
+
+**Alternative:** leave the rule display-only, as it was, or drop it from the schema.
+
+**Reason:** it was the one seeded rule an admin could publish new versions of without
+changing any outcome — editable policy that nothing reads is the kind of promise this repo
+should not make. A missing expiry still scores nothing, so the optional field stays optional.
 
 ## 2026-09-27 — Round-robin derived from the last assignment
 

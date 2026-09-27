@@ -83,8 +83,8 @@ queue on the next refresh. Nothing under `backend/app/platform/` changed.
   is one `difflib` ratio over `full_name` plus aliases against `sanctions_match_threshold`.
   Deterministic functions over seeded rows, no clients, no `rapidfuzz`.
 - **Scoring (`apps/kyc/scoring.py`):** high-risk country 25 + Needs-review IDV 30 + sanctions
-  match 60, each with its reason. Reads every current rule and returns it as the snapshot the
-  case stores.
+  match 60 + a document expiring inside `doc_expiry_window_days` 15, each with its reason.
+  Reads every current rule and returns it as the snapshot the case stores.
 - **Pipeline (`apps/kyc/pipeline.py`):** Failed IDV → customer Rejected, no case; under
   `auto_approve_below` with no match → Active, no case; otherwise a case, Escalated on a
   match or above `escalate_above`, else Open — assigned round-robin from the last assignment,
@@ -164,9 +164,7 @@ changes.
   anchors the tip of the chain.
 - The reset button in `DESIGN.md` §7 does not exist, in the UI or as a route. Replaying
   `db/seed/001_seed.sql` as the owner role, or `docker compose down -v`, restores the demo.
-- `doc_expiry_window_days` is seeded, editable and versioned, but `score_submission` reads
-  country, IDV verdict and sanctions only, so publishing it changes no score. Two seeded
-  cases carry historical reasons ("document expires within 30 days", "incomplete address
-  history") that the current scorer never produces.
+- Seeded case 3 carries a historical reason ("incomplete address history") that the current
+  scorer never produces; it stands in for a case decided under an older model.
 - There are no frontend or end-to-end tests; the UI is checked by hand against the skill in
   `.agents/skills/kyc-demo-testing/`.

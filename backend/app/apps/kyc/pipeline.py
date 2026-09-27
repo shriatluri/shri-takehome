@@ -56,7 +56,7 @@ def process(session: Session, submission: Submission) -> Outcome:
         session, submission.full_name, scoring.rule_int(snapshot, "sanctions_match_threshold")
     )
     risk_score, reasons = scoring.score_submission(
-        snapshot, submission.country, idv.status, match
+        snapshot, submission.country, idv.status, match, submission.document_expiry
     )
 
     # Low risk and nothing on the list: activated without a human looking.
