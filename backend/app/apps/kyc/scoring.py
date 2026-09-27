@@ -38,7 +38,8 @@ def rule_int(snapshot: Snapshot, rule_name: str) -> int:
 
 
 def high_risk_countries(snapshot: Snapshot) -> list[str]:
-    return [c.strip() for c in snapshot["high_risk_countries"]["value"].split(",") if c.strip()]
+    """Lowercased: the country arrives as the submitter typed it."""
+    return [c.strip().lower() for c in snapshot["high_risk_countries"]["value"].split(",") if c.strip()]
 
 
 def score_submission(
@@ -50,7 +51,7 @@ def score_submission(
     """Country + IDV verdict + sanctions hit, summed, with a reason per point."""
     reasons: list[dict[str, Any]] = []
 
-    if country in high_risk_countries(snapshot):
+    if country.strip().lower() in high_risk_countries(snapshot):
         reasons.append({"reason": f"high-risk country ({country})", "points": HIGH_RISK_COUNTRY_POINTS})
     if idv_status == "Needs review":
         reasons.append({"reason": "Needs review IDV", "points": NEEDS_REVIEW_IDV_POINTS})
