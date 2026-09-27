@@ -164,3 +164,60 @@ serialization, so no route can leak a full SSN by forgetting to call a helper.
 **Reason:** four pages, no deep links or nested layouts in scope, and the dependency is
 outside the agreed list. The role filtering is the part worth having, and it is the same
 either way.
+
+## 2026-09-27 — Sanctions screening compares names with `difflib`, not `rapidfuzz`
+
+**Decision:** one similarity ratio from the standard library's `SequenceMatcher` over the
+entry's `full_name` and each alias, compared against `sanctions_match_threshold`.
+
+**Alternative:** `rapidfuzz`, which `PLAN.md` allowed, or an exact normalized match.
+
+**Reason:** the demo needs a near miss — "Casey Lindquist" against the seeded "Casey
+Lindqvist" — so exact matching would not show the threshold doing anything, while a matching
+library is a dependency and a set of scorer choices for a screen that is six lines. Partial
+DOBs on the list stay out of the comparison entirely; the name is the whole signal.
+
+## 2026-09-27 — Additive risk score with the weights in code
+
+**Decision:** high-risk country (25) + Needs-review IDV (30) + sanctions match (60), summed,
+each contributing one reason. The thresholds it is compared against come from `policy_rules`;
+the weights do not.
+
+**Alternative:** putting the weights in `policy_rules` too, or a weighted model.
+
+**Reason:** what the admin page in PR 5 changes is where the lines sit, and the scenario 5
+demo moves `escalate_above`. Making every weight editable widens that page and the snapshot
+for no scenario. A sum with a reason per term is also the part that has to be explainable.
+
+## 2026-09-27 — Round-robin derived from the last assignment
+
+**Decision:** the next case goes to the compliance analyst after the one on the most recently
+created assigned case, in id order.
+
+**Alternative:** a counter column, or least-loaded assignment.
+
+**Reason:** no new state to migrate, seed or reset, and it survives a restart. Least-loaded
+is the better real policy but needs a definition of load that PR 4's decisions would change.
+
+## 2026-09-27 — One audit entry per submission
+
+**Decision:** the pipeline writes a single `submission.processed` entry, in the same
+transaction as the customer and case rows, with the outcome and reasons in `details`.
+
+**Alternative:** an entry per step — IDV checked, screened, scored, case created, assigned.
+
+**Reason:** a submission is one event from outside; the per-step rows would all carry the
+same actor and timestamp and only lengthen the chain the demo walks through. `details`
+already holds the score, the reasons and the case it produced.
+
+## 2026-09-27 — The submission form lives in `apps/kyc/`, not `demo/`
+
+**Decision:** form, mock vendors and pipeline are all under `backend/app/apps/kyc/` and
+`frontend/src/apps/kyc/`, though `DESIGN.md` §7 lists the form and mock IDV as demo controls.
+
+**Alternative:** split them, with the form and vendor mocks in `demo/`.
+
+**Reason:** the pipeline is the KYC app, and the mock vendors are the seams a real Clear or
+Dow Jones client would be swapped into — keeping them beside the pipeline they serve makes
+that swap a one-folder change. `demo/` stays what it is: the user switcher, i.e. things that
+would not exist at all outside the demo.

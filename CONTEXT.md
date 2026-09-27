@@ -41,8 +41,6 @@ seed expiry date, and the published Postgres port. Declined as not worth the sco
 URL-reserved characters in passwords, rotating the demo credentials, and re-running the role
 migration when `DB_APP_PASSWORD` changes.
 
-## Last session (most recent)
-
 ### Session 3 — platform controls (PR 2)
 
 The four controls the demo is about now work end to end: pick a user in the switcher and the
@@ -73,11 +71,34 @@ admin-only reads at the route rather than RLS plus a definer function; anonymous
 run as reserved id `0` with a null audit actor; coarse `customers` policy; full SSN requires
 compliance *and* senior; local-state nav instead of `react-router-dom`.
 
+## Last session (most recent)
+
+### Session 4 — KYC pipeline (PR 3)
+
+One vertical slice: submit the form on the page and a scored case appears in an analyst's
+queue on the next refresh. Nothing under `backend/app/platform/` changed.
+
+- **Route:** `POST /submissions`, anonymous, running on `session_for(SYSTEM_USER_ID)` so the
+  `app_is_system()` policies let it insert. It answers `{"status": "Received"}` and nothing
+  else — no case number, no outcome.
+- **Mock vendors (`apps/kyc/vendors.py`):** IDV is the `Clear/Blurry/Fake` lookup; screening
+  is one `difflib` ratio over `full_name` plus aliases against `sanctions_match_threshold`.
+  Deterministic functions over seeded rows, no clients, no `rapidfuzz`.
+- **Scoring (`apps/kyc/scoring.py`):** high-risk country 25 + Needs-review IDV 30 + sanctions
+  match 60, each with its reason. Reads every current rule and returns it as the snapshot the
+  case stores.
+- **Pipeline (`apps/kyc/pipeline.py`):** Failed IDV → customer Rejected, no case; under
+  `auto_approve_below` with no match → Active, no case; otherwise a case, Escalated on a
+  match or above `escalate_above`, else Open — assigned round-robin from the last assignment,
+  and one `submission.processed` audit entry either way, in the same transaction.
+- **Frontend:** `apps/kyc/SubmissionForm.tsx`, a plain always-visible form. `apiPost` grew an
+  optional JSON body; no other frontend platform file changed.
+- **Tests:** 5 slice tests (44 total) — case created, scored, assigned and visible to its
+  assignee; the sanctions branch and its audit entry; both no-case branches; the rotation.
+
 ## Next session
 
-**PR 3 — the KYC pipeline** (`backend/app/apps/kyc/`, per `PLAN.md`): the submission form,
-mock IDV and sanctions matching, risk scoring against `policy_rules` with a
-`policy_snapshot`, case creation and round-robin assignment. It imports the platform layer —
-identity, `session_scope`, `audit.record` — and adds nothing to it. The review queue UI with
-maker-checker approvals and the Suspend decision is PR 4; `/cases` and the queue page here
-are read-only placeholders that PR 4 replaces.
+**PR 4 — the review queue**, per `PLAN.md`: the queue page with 5s polling and a case detail
+page, maker-checker decisions with the self-approval block in the backend, Suspend, senior
+reassignment. `GET /cases` and `QueuePage` are still the read-only placeholders from PR 2 —
+PR 4 replaces them. The submission form is where PR 4's queue gets its new cases from.

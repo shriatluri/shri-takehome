@@ -62,8 +62,8 @@ against a Postgres service container on every PR.
 
 ```
 backend/app/platform/   reusable template: identity, roles, RLS helpers, masking, audit
-backend/app/apps/kyc/   KYC-specific logic
-backend/app/demo/       demo-only: user switcher, submission form, mock IDV, reset
+backend/app/apps/kyc/   KYC-specific logic: submission pipeline, mock vendors, scoring
+backend/app/demo/       demo-only: user switcher, reset
 frontend/src/{platform,apps/kyc,demo}/
 db/migrations/          numbered SQL, applied on startup
 db/seed/                synthetic seed data

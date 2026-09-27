@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { QueuePage } from "./apps/kyc/QueuePage";
+import { SubmissionForm } from "./apps/kyc/SubmissionForm";
 import { UserSwitcher } from "./demo/UserSwitcher";
 import { AuditPage } from "./platform/AuditPage";
 import { IdentityProvider, useIdentity } from "./platform/identity";
@@ -21,6 +22,8 @@ function Shell() {
     <main>
       <h1>KYC Review Queue</h1>
       <UserSwitcher />
+      {/* Anonymous, so it stays on the page whoever is signed in. */}
+      <SubmissionForm />
       {!identity && <p>Choose a demo user to sign in.</p>}
       <Nav pages={PAGES} current={current?.id ?? ""} onSelect={setPage} />
       {identity && !current && <p>This user has no pages. Operations is blocked by design.</p>}

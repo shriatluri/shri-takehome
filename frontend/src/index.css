@@ -72,3 +72,12 @@ nav button[aria-current="true"] {
 [role="alert"] {
   color: #a3222b;
 }
+
+form label {
+  display: block;
+  margin: 0.35rem 0;
+}
+
+form button {
+  margin-top: 0.5rem;
+}
