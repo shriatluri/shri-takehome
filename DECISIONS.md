@@ -161,7 +161,7 @@ serialization, so no route can leak a full SSN by forgetting to call a helper.
 
 **Alternative:** add `react-router-dom`.
 
-**Reason:** four pages, no deep links or nested layouts in scope, and the dependency is
+**Reason:** three pages, no deep links or nested layouts in scope, and the dependency is
 outside the agreed list. The role filtering is the part worth having, and it is the same
 either way.
 

@@ -19,7 +19,7 @@ const DECIDED = ["Approved", "Rejected", "Suspended"];
  *
  * Which cases arrive here is the database's decision, not this component's —
  * `GET /cases` has no `assigned_to` filter, so an analyst's list is short
- * because the RLS policy returned three rows.
+ * because the RLS policy returned only their rows.
  */
 export function QueuePage({ search }: { search: string }) {
   const { identity } = useIdentity();
