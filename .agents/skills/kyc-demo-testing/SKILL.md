@@ -16,7 +16,7 @@ description: Run browser-based KYC submission, role visibility, and audit checks
 - Date inputs are segmented in Chromium. Typing two month digits and two day digits advances automatically; explicit Right after each segment can skip fields. Verify the displayed date before submitting.
 - Leave document expiry blank to exercise its optional/null path.
 - Compare analysts against the assigned case and against the other analyst; compare a senior for full SSN.
-- Audit table shows System/action/customer ID, but not details. Supplement hidden outcomes and policy snapshots with read-only database observations.
+- Audit rows expand to show `details` and `prev_hash`; policy snapshots are on the case detail pane. Supplement anything else with read-only database observations.
 
 ## Distinguishing test data
 - Blurry + Volgaria produces Open/55 for a name not on sanctions.

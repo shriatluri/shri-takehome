@@ -148,15 +148,18 @@ place the audit log in the template, so filters, facets and chain verification b
   sees one screen and no tabs). The audit page gained the verify banner, the two filters and
   an expandable row showing `details` and the `prev_hash` it chains to; the policy page edits
   a rule in place and lists the full version history under it.
-- **Tests:** 5 admin tests (59 total) — scenario 5, the type 2 transition plus its audit
-  entry and the 409, admin-only on all four routes, the filters, and `verify` naming the row
-  after it is tampered with as the owner (the runtime role has no `UPDATE` to tamper with).
+- **Tests:** 5 admin tests — scenario 5, the type 2 transition plus its audit entry and the
+  409, admin-only on all four routes, the filters, and `verify` naming the row after it is
+  tampered with as the owner (the runtime role has no `UPDATE` to tamper with).
+- **Follow-ups in the same PR:** docs corrected to stop promising a reset button, `rapidfuzz`
+  and a table-count `/healthz`; `doc_expiry_window_days` wired into the scorer (15 points,
+  one test). 60 tests total.
 
 ## Next session
 
 **PR 6 — stretch**, per `PLAN.md`: a feature-flag app built entirely in
 `apps/feature_flags/` on top of `platform/`, proving a new internal app needs no template
-changes.
+changes. Not started.
 
 **Not built, and deliberately so — nothing in the docs should imply otherwise:**
 

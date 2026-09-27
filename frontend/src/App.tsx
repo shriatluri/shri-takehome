@@ -39,7 +39,7 @@ function Shell() {
   const [submitting, setSubmitting] = useState(false);
   const [pageId, setPageId] = useState<string | null>(null);
   // Compliance reaches one screen and admin two, so the switch is a pair of
-  // tabs in the page head rather than a nav rail down the side.
+  // tabs in the page head.
   const pages = visiblePages(PAGES, identity);
   const current = pages.find((page) => page.id === pageId) ?? pages[0];
 

@@ -39,6 +39,5 @@ app.include_router(kyc_router)
 
 @app.get("/healthz")
 def healthz() -> dict:
-    """Liveness only. It used to report a row count per table, but the counts
-    now depend on who is asking, and this route has no caller."""
+    """Liveness only: no database round trip."""
     return {"status": "ok"}
