@@ -105,3 +105,62 @@ that visibly changes RLS visibility.
 **Reason:** the build plan is strictly layered (foundation → template → app), each PR is
 meant to be reviewable in a few minutes, and sequential merges keep the demo runnable at
 every step.
+
+## 2026-09-27 — `audit_log` is append-only by grant, admin-only by route
+
+**Decision:** `kyc_app` holds `SELECT, INSERT` and no `UPDATE`/`DELETE` on `audit_log`, and
+no RLS policy is attached. "Only admin reads the log" is enforced on `GET /audit`.
+
+**Alternative:** an admin-only RLS SELECT policy, which forces the append path through a
+`SECURITY DEFINER` function owned by `kyc_owner` so it can still read the previous hash.
+
+**Reason:** every writer needs the tail of the chain to compute `prev_hash`, so strict RLS
+buys a definer function and a second privilege boundary for a demo where the property worth
+showing is tamper-evidence, not read isolation. The immutability that the hash chain depends
+on is the part the database still enforces.
+
+## 2026-09-27 — Anonymous submissions run as a reserved system identity
+
+**Decision:** `app.user_id = 0` identifies the submission pipeline. `app_is_system()` gates
+policies that let it insert customers and cases; its audit rows carry `employee_id = NULL`
+and the viewer renders that actor as "System".
+
+**Alternative:** a seeded "System" employee row.
+
+**Reason:** the submission form is an unauthenticated customer, not a member of staff. A
+seeded employee would appear in the user switcher, in round-robin assignment, and in any
+future `employees` listing. Id `0` cannot collide with a serial primary key.
+
+## 2026-09-27 — Coarse RLS on `customers`
+
+**Decision:** compliance (either level) and the system identity can read and write customers;
+operations and admin match no policy and see no rows.
+
+**Alternative:** filter customers through the assignments on their cases, so an analyst sees
+only the customers behind their own queue.
+
+**Reason:** it would make the visibility of a customer depend on a case that does not exist
+yet at insert time, and adds a join to every read for a rule no scenario tests. The demo's
+claim is that the database, not a `WHERE` clause, decides — a coarse policy still shows that.
+
+## 2026-09-27 — Full SSN requires compliance *and* senior
+
+**Decision:** `can_see_ssn` is `team = 'compliance' AND level = 'senior'`. Everyone else,
+admin included, gets `***-**-1234` from the serializer.
+
+**Alternative:** gate on `level = 'senior'` alone.
+
+**Reason:** the admin is `level = senior`, so the level check alone would hand unmasked SSNs
+to the one role `DESIGN.md` §5 gives no customer access at all. Masking happens in
+serialization, so no route can leak a full SSN by forgetting to call a helper.
+
+## 2026-09-27 — Local-state navigation over `react-router-dom`
+
+**Decision:** pages are a `Page[]` filtered by claim groups, with the current page in
+`useState`.
+
+**Alternative:** add `react-router-dom`.
+
+**Reason:** four pages, no deep links or nested layouts in scope, and the dependency is
+outside the agreed list. The role filtering is the part worth having, and it is the same
+either way.

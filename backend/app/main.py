@@ -1,19 +1,17 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
-from sqlalchemy.orm import Session
 
+from app.apps.kyc.routes import router as kyc_router
 from app.config import Settings
-from app.platform.db import get_session
+from app.demo.routes import router as demo_router
 from app.platform.migrations import run_migrations, run_seed
+from app.platform.routes import router as platform_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-TABLES = ("employees", "customers", "sanctions_list", "policy_rules", "cases", "audit_log")
 
 
 @asynccontextmanager
@@ -34,13 +32,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(platform_router)
+app.include_router(demo_router)
+app.include_router(kyc_router)
+
 
 @app.get("/healthz")
-def healthz(session: Session = Depends(get_session)) -> dict:
-    """Liveness plus a row count per table, which is how the frontend shell and
-    `docker compose up` confirm the database came up seeded."""
-    counts = {
-        table: session.execute(text(f"SELECT count(*) FROM {table}")).scalar_one()
-        for table in TABLES
-    }
-    return {"status": "ok", "counts": counts}
+def healthz() -> dict:
+    """Liveness only. It used to report a row count per table, but the counts
+    now depend on who is asking, and this route has no caller."""
+    return {"status": "ok"}

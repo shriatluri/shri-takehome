@@ -6,6 +6,7 @@ import psycopg
 import pytest
 
 TABLES = ["employees", "customers", "sanctions_list", "policy_rules", "cases", "audit_log"]
+PRIYA_ADMIN = 5
 
 
 def test_all_tables_exist(owner_conn):
@@ -32,13 +33,13 @@ def test_seed_covers_the_demo_roles(app_conn):
     assert counts[("operations", "analyst")] >= 1
 
 
-def test_seed_shows_every_account_status_the_demo_reaches(app_conn):
-    with app_conn.cursor() as cur:
+def test_seed_shows_every_account_status_the_demo_reaches(owner_conn):
+    with owner_conn.cursor() as cur:
         cur.execute("SELECT DISTINCT account_status FROM customers")
         statuses = {row[0] for row in cur.fetchall()}
     assert {"Pending", "Active", "Rejected", "Suspended"} <= statuses
 
-    with app_conn.cursor() as cur:
+    with owner_conn.cursor() as cur:
         cur.execute(
             """
             SELECT c.document_quality, c.idv_status
@@ -50,8 +51,8 @@ def test_seed_shows_every_account_status_the_demo_reaches(app_conn):
         assert cur.fetchall() == [("Blurry", "Needs review")]
 
 
-def test_every_policy_rule_has_exactly_one_current_version(app_conn):
-    with app_conn.cursor() as cur:
+def test_every_policy_rule_has_exactly_one_current_version(owner_conn):
+    with owner_conn.cursor() as cur:
         cur.execute("SELECT rule_name, value FROM policy_rules WHERE valid_to IS NULL")
         current = dict(cur.fetchall())
     assert current["auto_approve_below"] == "30"
@@ -97,9 +98,9 @@ def test_app_role_cannot_rewrite_history(app_conn):
             app_conn.rollback()
 
 
-def test_seeded_cases_carry_the_policy_that_scored_them(app_conn):
+def test_seeded_cases_carry_the_policy_that_scored_them(owner_conn):
     """A version number alone cannot say which values a decision used."""
-    with app_conn.cursor() as cur:
+    with owner_conn.cursor() as cur:
         cur.execute("SELECT policy_snapshot FROM cases")
         snapshots = [row[0] for row in cur.fetchall()]
     assert snapshots
@@ -114,17 +115,18 @@ def test_seeded_cases_carry_the_policy_that_scored_them(app_conn):
         }
 
 
-def test_app_role_can_close_a_rule_version_but_not_rewrite_one(app_conn):
+def test_app_role_can_close_a_rule_version_but_not_rewrite_one(as_user):
     """Publishing a version closes a row; the old values stay as they were."""
-    with app_conn.cursor() as cur:
+    with as_user(PRIYA_ADMIN) as conn, conn.cursor() as cur:
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             cur.execute("UPDATE policy_rules SET value = '999' WHERE rule_name = 'escalate_above'")
-        app_conn.rollback()
+        conn.rollback()
 
         cur.execute(
             "UPDATE policy_rules SET valid_to = now() WHERE rule_name = 'escalate_above'"
         )
-        app_conn.rollback()
+        assert cur.rowcount == 1
+        conn.rollback()
 
 
 def test_app_role_cannot_delete_business_records(app_conn):

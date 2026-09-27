@@ -1,4 +1,6 @@
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import replace
 
 import psycopg
@@ -47,6 +49,28 @@ def owner_conn(settings: Settings):
 
 @pytest.fixture
 def app_conn(settings: Settings):
-    """Connection as the runtime role, i.e. what the API itself can do."""
+    """Connection as the runtime role, i.e. what the API itself can do.
+
+    No identity is set, so the row-level security policies match nothing —
+    which is what an unauthenticated connection should see.
+    """
     with psycopg.connect(settings.url(settings.app_user, settings.app_password)) as conn:
         yield conn
+
+
+@pytest.fixture
+def as_user(settings: Settings):
+    """Open a runtime-role connection acting as one employee, the way a request
+    does. Raw SQL, so what it sees is the database's answer and not the API's."""
+
+    @contextmanager
+    def connect(employee_id: int) -> Iterator[psycopg.Connection]:
+        with psycopg.connect(settings.url(settings.app_user, settings.app_password)) as conn:
+            # Set outside a transaction, so a test that rolls back keeps its
+            # identity. A request sets the same value with SET LOCAL instead.
+            conn.autocommit = True
+            conn.execute("SELECT set_config('app.user_id', %s, false)", (str(employee_id),))
+            conn.autocommit = False
+            yield conn
+
+    return connect
