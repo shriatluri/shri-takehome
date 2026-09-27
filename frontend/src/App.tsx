@@ -5,7 +5,7 @@ import { SubmissionForm } from "./apps/kyc/SubmissionForm";
 import { UserSwitcher } from "./demo/UserSwitcher";
 import { AuditPage } from "./platform/AuditPage";
 import { IdentityProvider, useIdentity } from "./platform/identity";
-import { Icon, ICONS, Nav, visiblePages, type Page } from "./platform/nav";
+import { Icon, ICONS, visiblePages, type Page } from "./platform/nav";
 import { Card, Drawer, ToastProvider } from "./platform/ui";
 
 const PAGES: Page[] = [
@@ -14,7 +14,6 @@ const PAGES: Page[] = [
     label: "Review queue",
     groups: ["compliance"],
     section: "Compliance",
-    icon: <Icon path={ICONS.queue} />,
     render: (search) => <QueuePage search={search} />,
   },
   {
@@ -22,22 +21,21 @@ const PAGES: Page[] = [
     label: "Audit log",
     groups: ["admin"],
     section: "Oversight",
-    icon: <Icon path={ICONS.audit} />,
     render: (search) => <AuditPage search={search} />,
   },
 ];
 
 function Shell() {
   const { identity } = useIdentity();
-  const [page, setPage] = useState("queue");
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const allowed = visiblePages(PAGES, identity);
-  const current = allowed.find((candidate) => candidate.id === page) ?? allowed[0];
+  // Each role reaches exactly one screen, so there is nothing to navigate
+  // between: show the one this user is allowed, or the no-access card.
+  const current = visiblePages(PAGES, identity)[0];
 
   return (
     <div className="shell">
-      <aside className="sidebar">
+      <header className="topbar">
         <div className="brand">
           <div className="brand-mark">KYC</div>
           <div>
@@ -45,60 +43,56 @@ function Shell() {
             <small>Internal tools</small>
           </div>
         </div>
-        <Nav pages={PAGES} current={current?.id ?? ""} onSelect={setPage} />
-      </aside>
 
-      <div>
-        <header className="topbar">
-          <label className="search">
-            <Icon path={ICONS.search} />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search anything"
-              aria-label="Search"
-            />
-          </label>
-          <div className="row">
-            {/* Anonymous: it stands in for the customer's own signup page, so
-                it stays available whoever is signed in. */}
-            <button className="btn btn-primary" onClick={() => setSubmitting(true)}>
-              <Icon path={ICONS.form} />
-              New submission
-            </button>
-            <UserSwitcher />
-          </div>
-        </header>
+        <label className="search">
+          <Icon path={ICONS.search} />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search anything"
+            aria-label="Search"
+          />
+        </label>
 
-        <main className="content">
-          <div className="page-head">
-            <h1>{current?.label ?? "No access"}</h1>
-            <span className="breadcrumb">
-              {current?.section ?? "Compliance"} › <b>{current?.label ?? "No access"}</b>
-            </span>
-          </div>
+        <div className="row">
+          {/* Anonymous: it stands in for the customer's own signup page, so
+              it stays available whoever is signed in. */}
+          <button className="btn btn-primary" onClick={() => setSubmitting(true)}>
+            <Icon path={ICONS.form} />
+            New submission
+          </button>
+          <UserSwitcher />
+        </div>
+      </header>
 
-          {!identity && (
-            <Card title="Sign in">
-              <p className="muted">
-                Pick a demo user top-right. The switcher stands in for Entra ID; the backend
-                reads the claim and the database decides what that user can see.
-              </p>
-            </Card>
-          )}
-          {identity && !current && (
-            <Card title="No queue for this user">
-              <p className="muted">
-                {identity.name} is {identity.groups.join(" ")}. Operations is blocked from the
-                review queue by design — the API answers 403 and the row-level security
-                policies match no cases either.
-              </p>
-            </Card>
-          )}
-          {current?.render(search)}
-        </main>
-      </div>
+      <main className="content">
+        <div className="page-head">
+          <h1>{current?.label ?? "No access"}</h1>
+          <span className="breadcrumb">
+            {current?.section ?? "Compliance"} › <b>{current?.label ?? "No access"}</b>
+          </span>
+        </div>
+
+        {!identity && (
+          <Card title="Sign in">
+            <p className="muted">
+              Pick a demo user top-right. The switcher stands in for Entra ID; the backend
+              reads the claim and the database decides what that user can see.
+            </p>
+          </Card>
+        )}
+        {identity && !current && (
+          <Card title="No queue for this user">
+            <p className="muted">
+              {identity.name} is {identity.groups.join(" ")}. Operations is blocked from the
+              review queue by design — the API answers 403 and the row-level security
+              policies match no cases either.
+            </p>
+          </Card>
+        )}
+        {current?.render(search)}
+      </main>
 
       {submitting && (
         <Drawer

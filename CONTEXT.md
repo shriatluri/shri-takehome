@@ -114,10 +114,13 @@ the customer's account status follow. Scenarios 2, 3, 6 and 7 pass. Nothing unde
   previous assignee loses the case on their next poll, because the RLS policy is the only
   thing deciding who sees it.
 - **Frontend:** design tokens in `index.css` and primitives in `platform/ui.tsx` (card,
-  badge, risk dial, drawer, toasts, skeletons) — no UI dependency added. Sidebar shell, queue
-  with 5s polling, filter chips, search, clickable rows, and a case drawer with the risk
-  breakdown, policy snapshot, maker-checker state and the actions this user may take. The
-  submission form moved into a drawer; it still says "Received." and nothing else.
+  badge, risk dial, drawer, toasts, skeletons) — no UI dependency added. One screen per role,
+  so there is no nav rail: a topbar carries brand, search and the demo identity, and the queue
+  below it is a list beside a detail pane — 5s polling, filter chips, clickable and
+  keyboard-selectable rows, and the risk breakdown, policy snapshot, maker-checker state and
+  the actions this user may take. Selecting a case is dropped when the identity changes, so
+  one reviewer's customer never shows under another's name. The submission form moved into a
+  drawer; it still says "Received." and nothing else.
 - **Tests:** 10 queue tests (54 total) — approval path, self-approval block, missing
   recommendation, already-decided, operations 403 on every route, analyst 404 on another
   analyst's case, raw SQL as `kyc_app` seeing only assigned rows, reassignment flipping

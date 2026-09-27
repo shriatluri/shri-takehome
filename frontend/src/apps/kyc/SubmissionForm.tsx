@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import { apiPost } from "../../platform/api";
-import { useToast } from "../../platform/ui";
 
 const EMPTY = {
   full_name: "",
@@ -21,7 +20,6 @@ const EMPTY = {
 export function SubmissionForm() {
   const [form, setForm] = useState(EMPTY);
   const [state, setState] = useState<"editing" | "sending" | "received" | "failed">("editing");
-  const toast = useToast();
 
   const field = (name: keyof typeof EMPTY) => ({
     value: form[name],
@@ -36,7 +34,6 @@ export function SubmissionForm() {
       .then(() => {
         setForm(EMPTY);
         setState("received");
-        toast("Submission received — check the queue on the next refresh");
       })
       .catch(() => setState("failed"));
   };

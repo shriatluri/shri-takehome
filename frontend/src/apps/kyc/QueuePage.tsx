@@ -30,6 +30,15 @@ export function QueuePage({ search }: { search: string }) {
   const [filter, setFilter] = useState<Filter>("Needs action");
   const [selected, setSelected] = useState<number | null>(null);
 
+  // A selected case belongs to the user who opened it. Dropping it during the
+  // render that changes user — rather than in an effect afterwards — means the
+  // pane never paints one reviewer's customer under another's name.
+  const [openedBy, setOpenedBy] = useState(identity?.sub ?? null);
+  if ((identity?.sub ?? null) !== openedBy) {
+    setOpenedBy(identity?.sub ?? null);
+    setSelected(null);
+  }
+
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
     return cases.filter((kase) => {
