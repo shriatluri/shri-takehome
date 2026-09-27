@@ -143,3 +143,13 @@ def test_app_role_does_not_own_the_tables(app_conn, settings):
             (settings.app_user,),
         )
         assert cur.fetchone()[0] == 0
+
+
+def test_connection_url_escapes_credentials(settings):
+    """A password with URL delimiters must not redirect the connection."""
+    from dataclasses import replace
+
+    tricky = replace(settings, app_password="p@ss:w/rd?")
+    url = tricky.url(tricky.app_user, tricky.app_password)
+    assert f"@{settings.host}:{settings.port}/{settings.database}" in url
+    assert "p%40ss%3Aw%2Frd%3F" in url

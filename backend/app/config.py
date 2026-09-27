@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import quote
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MIGRATIONS_DIR = Path(os.environ.get("MIGRATIONS_DIR", REPO_ROOT / "db" / "migrations"))
@@ -36,8 +37,12 @@ class Settings:
         )
 
     def url(self, user: str, password: str, driver: str = "") -> str:
+        # Credentials are percent-encoded: a password containing ``@``, ``/`` or
+        # ``:`` would otherwise split the URL somewhere else and the driver
+        # would connect as different credentials, or to a different host.
         scheme = f"postgresql+{driver}" if driver else "postgresql"
-        return f"{scheme}://{user}:{password}@{self.host}:{self.port}/{self.database}"
+        credentials = f"{quote(user, safe='')}:{quote(password, safe='')}"
+        return f"{scheme}://{credentials}@{self.host}:{self.port}/{self.database}"
 
     @property
     def owner_url(self) -> str:
