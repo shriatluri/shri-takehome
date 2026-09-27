@@ -26,7 +26,7 @@ connection cannot leak identity between requests.
 
 ## 2026-09-27 — Suspension is a decision outcome, not a side effect
 
-**Decision:** reviewing a Needs-review case offers Approve / Reject / Suspend. Suspend sets
+**Decision:** reviewing a case offers Approve / Reject / Suspend. Suspend sets
 the customer to `Suspended` and moves the case to a `Suspended` status, so `cases.status` and
 `cases.recommendation` gain `Suspended` / `Suspend` beyond `DESIGN.md` §4.
 
@@ -172,22 +172,33 @@ entry's `full_name` and each alias, compared against `sanctions_match_threshold`
 
 **Alternative:** `rapidfuzz`, which `PLAN.md` allowed, or an exact normalized match.
 
-**Reason:** the demo needs a near miss — "Casey Lindquist" against the seeded "Casey
-Lindqvist" — so exact matching would not show the threshold doing anything, while a matching
+**Reason:** the demo needs a near miss — a typed "Casee Lindquist" against the seeded list
+entry "Casey Lindquist" — so exact matching would not show the threshold doing anything, while a matching
 library is a dependency and a set of scorer choices for a screen that is six lines. Partial
 DOBs on the list stay out of the comparison entirely; the name is the whole signal.
 
 ## 2026-09-27 — Additive risk score with the weights in code
 
-**Decision:** high-risk country (25) + Needs-review IDV (30) + sanctions match (60), summed,
-each contributing one reason. The thresholds it is compared against come from `policy_rules`;
-the weights do not.
+**Decision:** high-risk country (25) + Needs-review IDV (30) + sanctions match (60) + a
+document expiring inside `doc_expiry_window_days` (15), summed, each contributing one reason.
+The thresholds it is compared against come from `policy_rules`; the weights do not.
 
 **Alternative:** putting the weights in `policy_rules` too, or a weighted model.
 
 **Reason:** what the admin page in PR 5 changes is where the lines sit, and the scenario 5
 demo moves `escalate_above`. Making every weight editable widens that page and the snapshot
 for no scenario. A sum with a reason per term is also the part that has to be explainable.
+
+## 2026-09-27 — `doc_expiry_window_days` scores the submission rather than sitting unread
+
+**Decision:** a `document_expiry` on or before `today + doc_expiry_window_days` adds 15
+points with the reason "document expires within N days", N taken from the rule in force.
+
+**Alternative:** leave the rule display-only, as it was, or drop it from the schema.
+
+**Reason:** it was the one seeded rule an admin could publish new versions of without
+changing any outcome — editable policy that nothing reads is the kind of promise this repo
+should not make. A missing expiry still scores nothing, so the optional field stays optional.
 
 ## 2026-09-27 — Round-robin derived from the last assignment
 
@@ -268,3 +279,39 @@ badge, risk dial, drawer, toast); no UI dependency was added.
 build step and a hundred components for that, and the point of the exercise is what the
 database enforces, not which toolkit renders it. Anything reusable across apps sits in
 `platform/` so the next app on this template inherits the look.
+
+## 2026-09-27 — Audit filtering and chain verify stay in `platform/`
+
+**Decision:** filters, facets and `verify` were added to `platform/audit.py` and
+`platform/routes.py` rather than wrapped in `apps/kyc/`.
+
+**Alternative:** a KYC-owned audit screen reading the table directly, leaving `platform/`
+untouched as in PR 3 and PR 4.
+
+**Reason:** the log is the template's, not this app's — `DESIGN.md` lists it under
+`platform/`, and the stretch feature-flag app is supposed to inherit the same viewer without
+writing one. Only the policy rules, which are KYC policy, went into `apps/kyc/policy.py`.
+
+## 2026-09-27 — `verify` reports the first broken row, and cannot see a truncated tip
+
+**Decision:** `GET /audit/verify` returns `{intact, broken_at, checked}`, where `checked`
+counts the rows before the break.
+
+**Alternative:** a boolean, or storing a running anchor elsewhere so truncation is caught too.
+
+**Reason:** an edited row is detectable because its successor carries the hash it should have
+had; deleting the newest rows leaves no successor to contradict, so catching that needs an
+anchor outside the table (a periodic notarised tip). Pointing at the first bad row is what
+makes the demo legible — tamper with row 1 as the owner and the page names row 1.
+
+## 2026-09-27 — A rule edit publishes a version instead of updating the row
+
+**Decision:** `PUT /policy-rules/{rule}` closes the current row with `valid_to = now()` and
+inserts version + 1; cases keep the `policy_snapshot` they recorded at scoring time.
+
+**Alternative:** update `value` in place and let cases point at the rule row.
+
+**Reason:** scenario 5 is the question "under which policy was this decided?", and an
+in-place update destroys the answer for every case already decided. The grants agree with
+the decision: the runtime role has `INSERT` and `UPDATE (valid_to)` on `policy_rules` and no
+other update, so the database refuses an overwrite even if the code asked for one.

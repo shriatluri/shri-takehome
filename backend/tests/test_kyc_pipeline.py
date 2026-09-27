@@ -3,6 +3,8 @@ queue. Asserted through the API and the database rather than function by
 function — what matters is that the pieces line up.
 """
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -91,6 +93,24 @@ def test_a_clean_submission_is_activated_without_a_case(client):
     entry = client.get("/audit", headers={"X-Demo-User": str(PRIYA_ADMIN)}).json()[0]
     assert entry["details"]["account_status"] == "Active"
     assert entry["details"]["case_id"] is None
+
+
+def test_a_document_expiring_inside_the_policy_window_adds_points(client):
+    """`doc_expiry_window_days` is policy: a document expiring inside it scores 15."""
+    soon = (datetime.now(UTC).date() + timedelta(days=10)).isoformat()
+    submit(
+        client,
+        full_name="Marla Vestergaard",
+        document_quality="Blurry",
+        document_expiry=soon,
+    )
+
+    case_id = newest_case(client)["id"]
+    detail = client.get(f"/cases/{case_id}", headers={"X-Demo-User": str(DANA)}).json()
+    assert detail["risk_score"] == 45  # Needs review IDV 30 + expiring document 15
+    assert "document expires within 30 days" in {
+        reason["reason"] for reason in detail["risk_reasons"]
+    }
 
 
 def test_a_fake_document_is_rejected_without_a_case(client):

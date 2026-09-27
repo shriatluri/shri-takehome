@@ -5,6 +5,7 @@ every rule read is returned alongside the score so the case can record the
 policy it was decided under.
 """
 
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import text
@@ -17,6 +18,7 @@ from app.apps.kyc.vendors import SanctionsMatch
 HIGH_RISK_COUNTRY_POINTS = 25
 NEEDS_REVIEW_IDV_POINTS = 30
 SANCTIONS_MATCH_POINTS = 60
+EXPIRING_DOCUMENT_POINTS = 15
 
 Snapshot = dict[str, dict[str, Any]]
 
@@ -47,8 +49,10 @@ def score_submission(
     country: str,
     idv_status: str,
     sanctions_match: SanctionsMatch | None,
+    document_expiry: date | None = None,
 ) -> tuple[int, list[dict[str, Any]]]:
-    """Country + IDV verdict + sanctions hit, summed, with a reason per point."""
+    """Country + IDV verdict + sanctions hit + document expiry, summed, with a
+    reason per point."""
     reasons: list[dict[str, Any]] = []
 
     if country.strip().lower() in high_risk_countries(snapshot):
@@ -64,4 +68,17 @@ def score_submission(
             }
         )
 
+    window = rule_int(snapshot, "doc_expiry_window_days")
+    if document_expiry is not None and document_expiry <= _today() + timedelta(days=window):
+        reasons.append(
+            {
+                "reason": f"document expires within {window} days",
+                "points": EXPIRING_DOCUMENT_POINTS,
+            }
+        )
+
     return sum(reason["points"] for reason in reasons), reasons
+
+
+def _today() -> date:
+    return datetime.now(UTC).date()

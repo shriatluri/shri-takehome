@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.apps.kyc import decisions, pipeline
+from app.apps.kyc import decisions, pipeline, policy
 from app.platform.db import session_for
 from app.platform.identity import SYSTEM_USER_ID, Identity, request_session, require_group
 from app.platform.masking import ssn_for
@@ -47,6 +47,10 @@ class DecisionRequest(BaseModel):
 
 class AssignmentRequest(BaseModel):
     assigned_to: int
+
+
+class PolicyRuleRequest(BaseModel):
+    value: str
 
 
 def system_session() -> Iterator[Session]:
@@ -158,6 +162,25 @@ def reassign(
     case = decisions.load(session, case_id)
     decisions.reassign(session, identity, case, body.assigned_to)
     return {"assigned_to": body.assigned_to}
+
+
+@router.get("/policy-rules")
+def policy_rules(
+    _: Identity = Depends(require_group("admin")),
+    session: Session = Depends(request_session),
+) -> list[dict]:
+    """Every version, so the page can show what the rule used to say."""
+    return policy.history(session)
+
+
+@router.put("/policy-rules/{rule_name}")
+def publish_policy_rule(
+    rule_name: str,
+    body: PolicyRuleRequest,
+    identity: Identity = Depends(require_group("admin")),
+    session: Session = Depends(request_session),
+) -> dict:
+    return policy.publish(session, identity, rule_name, body.value)
 
 
 @router.get("/reviewers")

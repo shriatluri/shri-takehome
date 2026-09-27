@@ -15,7 +15,7 @@ Postgres row-level security, server-side field masking, and a hash-chained audit
 docker compose up
 ```
 
-- API: http://localhost:8000 (`/healthz` reports a row count per table)
+- API: http://localhost:8000 (`/healthz` is liveness only)
 - UI: http://localhost:5173
 - Postgres: 127.0.0.1:5432 (bound to loopback only)
 
@@ -35,6 +35,10 @@ the customer's own signup form, so it works whoever is signed in.
   compliance senior has to approve it.
 - **Owen Park (operations)** → no queue. The route answers 403 and the RLS policies match no
   rows either.
+- **Priya Raman (admin)** → no queue, but two oversight screens. On **Policy rules**, publish
+  `escalate_above` 50: the old row is closed and version 2 opens, and a submission scoring 55
+  is now Escalated while the seeded case that also scored 55 still shows version 1. On
+  **Audit log**, filter by action and hit **Verify chain** to recompute every hash.
 - **Alice vs. Ben** → each analyst sees only their own cases, and the same is true in `psql`
   as `kyc_app` with `app.user_id` set. The API adds no `assigned_to` filter; the database is
   the only thing enforcing it.
@@ -58,7 +62,8 @@ before they run, which is how the runtime role name and password reach `CREATE R
 `GRANT` without being hardcoded.
 
 Seed data lives in `db/seed/`. The files truncate before inserting, so replaying them restores
-the demo state; that is what the demo reset button will call.
+the demo state. There is no reset endpoint or button yet; restore the demo by replaying the
+seed file with `psql`, or `docker compose down -v` to start from an empty volume.
 
 ## Tests
 
@@ -78,7 +83,7 @@ called done:
 | 2 | Blurry document → Open case, analyst approves, customer Active | `test_scenario_2_analyst_approves_an_open_case` |
 | 3 | Near-sanctions name → Escalated, recommender cannot approve, senior does | `test_scenario_3_maker_checker_on_an_escalated_case`, `test_a_senior_cannot_approve_their_own_recommendation` |
 | 4 | Fake document → Rejected, no case | `test_a_fake_document_is_rejected_without_a_case` |
-| 5 | Policy edit re-versions, old cases keep version 1 | **not yet — PR 5** |
+| 5 | Policy edit re-versions, old cases keep version 1 | `test_scenario_5_a_new_threshold_binds_new_cases_only` |
 | 6 | Operations opens the queue → blocked | `test_scenario_6_operations_is_blocked_from_every_queue_route` |
 | 7 | Analyst queries `cases` as the app role → only assigned rows | `test_scenario_7_an_analyst_reaches_only_their_own_cases` |
 
@@ -97,7 +102,7 @@ against a Postgres service container on every PR.
 ```
 backend/app/platform/   reusable template: identity, roles, RLS helpers, masking, audit
 backend/app/apps/kyc/   KYC-specific logic: submission pipeline, mock vendors, scoring
-backend/app/demo/       demo-only: user switcher, reset
+backend/app/demo/       demo-only: user switcher
 frontend/src/{platform,apps/kyc,demo}/
 db/migrations/          numbered SQL, applied on startup
 db/seed/                synthetic seed data

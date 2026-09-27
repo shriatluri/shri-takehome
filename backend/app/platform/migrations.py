@@ -77,7 +77,7 @@ def run_seed(settings: Settings, seed_dir: Path = SEED_DIR, force: bool = False)
     """Load seed data. Skipped when the database already has employees.
 
     The seed files truncate before inserting, so ``force=True`` restores the
-    original demo state; that is what the demo reset button will call.
+    original demo state. Only the test suite uses it; there is no reset route.
     """
     if not force and database_is_seeded(settings):
         return False

@@ -47,6 +47,14 @@ export function apiPost<T>(path: string, body?: unknown): Promise<T> {
   });
 }
 
+export function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export type Employee = {
   id: number;
   name: string;
@@ -95,9 +103,31 @@ export type Reviewer = { id: number; name: string; level: string };
 export type AuditEntry = {
   id: number;
   timestamp: string;
+  employee_id: number | null;
   employee_name: string | null;
   action: string;
   record_type: string;
   record_id: string | null;
+  details: Record<string, unknown>;
+  prev_hash: string | null;
   hash: string;
+};
+
+export type AuditFacets = { actions: string[]; record_types: string[] };
+
+export type AuditVerification = {
+  intact: boolean;
+  broken_at: number | null;
+  checked: number;
+};
+
+export type PolicyRule = {
+  id: number;
+  rule_name: string;
+  value: string;
+  version: number;
+  valid_from: string;
+  valid_to: string | null;
+  changed_by: number | null;
+  changed_by_name: string | null;
 };

@@ -1,4 +1,4 @@
--- Synthetic seed data. Rerunnable: the demo reset button replays this file.
+-- Synthetic seed data. Rerunnable: replaying this file restores the demo state.
 -- Names, addresses and identifiers are invented; SSNs use the 900 prefix, which
 -- is never issued as a real SSN.
 
