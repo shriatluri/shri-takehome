@@ -107,7 +107,20 @@ def record(
     return digest
 
 
-def read(session: Session, limit: int = 100) -> list[dict[str, Any]]:
+def read(
+    session: Session,
+    limit: int = 100,
+    action: str | None = None,
+    record_type: str | None = None,
+    employee_id: int | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+) -> list[dict[str, Any]]:
+    """The newest entries, narrowed by whichever filters were supplied.
+
+    Filtering happens here rather than in the browser because the page only ever
+    holds the most recent slice of a log that grows without bound.
+    """
     rows = session.execute(
         text(
             """
@@ -115,13 +128,36 @@ def read(session: Session, limit: int = 100) -> list[dict[str, Any]]:
                    a.record_type, a.record_id, a.details, a.prev_hash, a.hash
             FROM audit_log a
             LEFT JOIN employees e ON e.id = a.employee_id
+            WHERE (CAST(:action AS text) IS NULL OR a.action = :action)
+              AND (CAST(:record_type AS text) IS NULL OR a.record_type = :record_type)
+              AND (CAST(:employee_id AS integer) IS NULL OR a.employee_id = :employee_id)
+              AND (CAST(:since AS timestamptz) IS NULL OR a.timestamp >= :since)
+              AND (CAST(:until AS timestamptz) IS NULL OR a.timestamp <= :until)
             ORDER BY a.id DESC
             LIMIT :limit
             """
         ),
-        {"limit": limit},
+        {
+            "limit": limit,
+            "action": action,
+            "record_type": record_type,
+            "employee_id": employee_id,
+            "since": since,
+            "until": until,
+        },
     ).mappings()
     return [dict(row) for row in rows]
+
+
+def facets(session: Session) -> dict[str, list[Any]]:
+    """The actions and record types actually present, for the filter controls."""
+    actions = session.execute(
+        text("SELECT DISTINCT action FROM audit_log ORDER BY action")
+    ).scalars()
+    record_types = session.execute(
+        text("SELECT DISTINCT record_type FROM audit_log ORDER BY record_type")
+    ).scalars()
+    return {"actions": list(actions), "record_types": list(record_types)}
 
 
 def verify(session: Session) -> int | None:
@@ -155,3 +191,16 @@ def verify(session: Session) -> int | None:
             return row["id"]
         prev_hash = row["hash"]
     return None
+
+
+def verify_report(session: Session) -> dict[str, Any]:
+    """``verify`` plus how far the chain was walked, for the viewer's banner."""
+    broken_at = verify(session)
+    checked = session.execute(
+        text(
+            "SELECT count(*) FROM audit_log"
+            " WHERE CAST(:broken AS integer) IS NULL OR id < :broken"
+        ),
+        {"broken": broken_at},
+    ).scalar_one()
+    return {"intact": broken_at is None, "broken_at": broken_at, "checked": checked}

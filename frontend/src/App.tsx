@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { PolicyPage } from "./apps/kyc/PolicyPage";
 import { QueuePage } from "./apps/kyc/QueuePage";
 import { SubmissionForm } from "./apps/kyc/SubmissionForm";
 import { UserSwitcher } from "./demo/UserSwitcher";
@@ -17,6 +18,13 @@ const PAGES: Page[] = [
     render: (search) => <QueuePage search={search} />,
   },
   {
+    id: "policy",
+    label: "Policy rules",
+    groups: ["admin"],
+    section: "Oversight",
+    render: (search) => <PolicyPage search={search} />,
+  },
+  {
     id: "audit",
     label: "Audit log",
     groups: ["admin"],
@@ -29,9 +37,11 @@ function Shell() {
   const { identity } = useIdentity();
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  // Each role reaches exactly one screen, so there is nothing to navigate
-  // between: show the one this user is allowed, or the no-access card.
-  const current = visiblePages(PAGES, identity)[0];
+  const [pageId, setPageId] = useState<string | null>(null);
+  // Compliance reaches one screen and admin two, so the switch is a pair of
+  // tabs in the page head rather than a nav rail down the side.
+  const pages = visiblePages(PAGES, identity);
+  const current = pages.find((page) => page.id === pageId) ?? pages[0];
 
   return (
     <div className="shell">
@@ -39,7 +49,7 @@ function Shell() {
         <div className="brand">
           <div className="brand-mark">KYC</div>
           <div>
-            <h1>Review Queue</h1>
+            <h1>KYC Console</h1>
             <small>Internal tools</small>
           </div>
         </div>
@@ -69,9 +79,26 @@ function Shell() {
       <main className="content">
         <div className="page-head">
           <h1>{current?.label ?? "No access"}</h1>
-          <span className="breadcrumb">
-            {current?.section ?? "Compliance"} › <b>{current?.label ?? "No access"}</b>
-          </span>
+          {pages.length > 1 ? (
+            <div className="chips" role="tablist">
+              {pages.map((page) => (
+                <button
+                  key={page.id}
+                  className="chip"
+                  role="tab"
+                  aria-pressed={page.id === current?.id}
+                  aria-selected={page.id === current?.id}
+                  onClick={() => setPageId(page.id)}
+                >
+                  {page.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="breadcrumb">
+              {current?.section ?? "Compliance"} › <b>{current?.label ?? "No access"}</b>
+            </span>
+          )}
         </div>
 
         {!identity && (

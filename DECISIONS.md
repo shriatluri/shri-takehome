@@ -268,3 +268,39 @@ badge, risk dial, drawer, toast); no UI dependency was added.
 build step and a hundred components for that, and the point of the exercise is what the
 database enforces, not which toolkit renders it. Anything reusable across apps sits in
 `platform/` so the next app on this template inherits the look.
+
+## 2026-09-27 — Audit filtering and chain verify stay in `platform/`
+
+**Decision:** filters, facets and `verify` were added to `platform/audit.py` and
+`platform/routes.py` rather than wrapped in `apps/kyc/`.
+
+**Alternative:** a KYC-owned audit screen reading the table directly, leaving `platform/`
+untouched as in PR 3 and PR 4.
+
+**Reason:** the log is the template's, not this app's — `DESIGN.md` lists it under
+`platform/`, and the stretch feature-flag app is supposed to inherit the same viewer without
+writing one. Only the policy rules, which are KYC policy, went into `apps/kyc/policy.py`.
+
+## 2026-09-27 — `verify` reports the first broken row, and cannot see a truncated tip
+
+**Decision:** `GET /audit/verify` returns `{intact, broken_at, checked}`, where `checked`
+counts the rows before the break.
+
+**Alternative:** a boolean, or storing a running anchor elsewhere so truncation is caught too.
+
+**Reason:** an edited row is detectable because its successor carries the hash it should have
+had; deleting the newest rows leaves no successor to contradict, so catching that needs an
+anchor outside the table (a periodic notarised tip). Pointing at the first bad row is what
+makes the demo legible — tamper with row 1 as the owner and the page names row 1.
+
+## 2026-09-27 — A rule edit publishes a version instead of updating the row
+
+**Decision:** `PUT /policy-rules/{rule}` closes the current row with `valid_to = now()` and
+inserts version + 1; cases keep the `policy_snapshot` they recorded at scoring time.
+
+**Alternative:** update `value` in place and let cases point at the rule row.
+
+**Reason:** scenario 5 is the question "under which policy was this decided?", and an
+in-place update destroys the answer for every case already decided. The grants agree with
+the decision: the runtime role has `INSERT` and `UPDATE (valid_to)` on `policy_rules` and no
+other update, so the database refuses an overwrite even if the code asked for one.

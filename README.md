@@ -35,6 +35,10 @@ the customer's own signup form, so it works whoever is signed in.
   compliance senior has to approve it.
 - **Owen Park (operations)** → no queue. The route answers 403 and the RLS policies match no
   rows either.
+- **Priya Raman (admin)** → no queue, but two oversight screens. On **Policy rules**, publish
+  `escalate_above` 50: the old row is closed and version 2 opens, and a submission scoring 55
+  is now Escalated while the seeded case that also scored 55 still shows version 1. On
+  **Audit log**, filter by action and hit **Verify chain** to recompute every hash.
 - **Alice vs. Ben** → each analyst sees only their own cases, and the same is true in `psql`
   as `kyc_app` with `app.user_id` set. The API adds no `assigned_to` filter; the database is
   the only thing enforcing it.
@@ -78,7 +82,7 @@ called done:
 | 2 | Blurry document → Open case, analyst approves, customer Active | `test_scenario_2_analyst_approves_an_open_case` |
 | 3 | Near-sanctions name → Escalated, recommender cannot approve, senior does | `test_scenario_3_maker_checker_on_an_escalated_case`, `test_a_senior_cannot_approve_their_own_recommendation` |
 | 4 | Fake document → Rejected, no case | `test_a_fake_document_is_rejected_without_a_case` |
-| 5 | Policy edit re-versions, old cases keep version 1 | **not yet — PR 5** |
+| 5 | Policy edit re-versions, old cases keep version 1 | `test_scenario_5_a_new_threshold_binds_new_cases_only` |
 | 6 | Operations opens the queue → blocked | `test_scenario_6_operations_is_blocked_from_every_queue_route` |
 | 7 | Analyst queries `cases` as the app role → only assigned rows | `test_scenario_7_an_analyst_reaches_only_their_own_cases` |
 

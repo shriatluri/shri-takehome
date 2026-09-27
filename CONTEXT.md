@@ -94,8 +94,6 @@ queue on the next refresh. Nothing under `backend/app/platform/` changed.
 - **Tests:** 5 slice tests (44 total) — case created, scored, assigned and visible to its
   assignee; the sanctions branch and its audit entry; both no-case branches; the rotation.
 
-## Last session (most recent)
-
 ### Session 5 — review queue (PR 4)
 
 The queue is now the working half of the demo: submit a case, open it, decide it, and watch
@@ -126,10 +124,37 @@ the customer's account status follow. Scenarios 2, 3, 6 and 7 pass. Nothing unde
   analyst's case, raw SQL as `kyc_app` seeing only assigned rows, reassignment flipping
   visibility, and the audit entries.
 
+## Last session (most recent)
+
+### Session 6 — admin: policy versioning and the audit chain (PR 5)
+
+Scenario 5 passes and the audit log is a working oversight screen rather than a list. This
+is the one PR that edits `backend/app/platform/` on purpose: `PLAN.md` and `DESIGN.md` both
+place the audit log in the template, so filters, facets and chain verification belong in
+`platform/audit.py`, not in `apps/kyc/`.
+
+- **Policy (`apps/kyc/policy.py`):** `GET /policy-rules` returns every version;
+  `PUT /policy-rules/{rule}` closes the row in force (`valid_to = now()`) and inserts
+  version + 1, audited in the same transaction. Admin only, and the runtime role's grants
+  (`INSERT`, `UPDATE (valid_to)`) allow nothing else. Republishing the same value is 409.
+- **Scenario 5:** a case scored after the edit records `escalate_above` v2 in its
+  `policy_snapshot`; the seeded case that also scored 55 still reads v1, so the older
+  decision stays explainable under the policy it was taken under.
+- **Audit:** `GET /audit` takes `action`, `record_type`, `employee_id`, `since`, `until` and
+  `limit` — filtered in SQL, because the page only holds the newest slice of the log.
+  `GET /audit/facets` feeds the filter controls and `GET /audit/verify` recomputes every
+  hash, answering `{intact, broken_at, checked}`.
+- **Frontend:** admin now has two screens, so the page head grew tab chips (compliance still
+  sees one screen and no tabs). The audit page gained the verify banner, the two filters and
+  an expandable row showing `details` and the `prev_hash` it chains to; the policy page edits
+  a rule in place and lists the full version history under it.
+- **Tests:** 5 admin tests (59 total) — scenario 5, the type 2 transition plus its audit
+  entry and the 409, admin-only on all four routes, the filters, and `verify` naming the row
+  after it is tampered with as the owner (the runtime role has no `UPDATE` to tamper with).
+
 ## Next session
 
-**PR 5 — policy administration**, per `PLAN.md`: the admin page that versions `policy_rules`
-(`valid_to` on the old row, a new row at version + 1) so scenario 5 passes — change
-`escalate_above` 70 → 50, submit something scoring ~60, and the new case is Escalated under
-version 2 while the older case still shows version 1 in its snapshot. The audit page is also
-still the unfiltered 100-row list from PR 2; chain verification belongs there.
+**PR 6 — stretch**, per `PLAN.md`: a feature-flag app built entirely in
+`apps/feature_flags/` on top of `platform/`, proving a new internal app needs no template
+changes. Known gap if it is worth closing first: `verify` cannot detect the newest rows
+being truncated, since nothing outside `audit_log` anchors the tip of the chain.
